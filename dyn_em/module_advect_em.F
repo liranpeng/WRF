@@ -10,6 +10,9 @@ MODULE advection_kernel
       INTEGER :: scalar_adv_opt = 0
       INTEGER :: h_sca_adv_order = 5
       INTEGER :: v_sca_adv_order = 3
+      INTEGER :: cpm_opt = 1
+      INTEGER :: cpm_meso_pblh = 1
+      INTEGER :: cpm_meso_hfx = 1
       LOGICAL :: periodic_x = .false.
       LOGICAL :: periodic_y = .false.
       LOGICAL :: symmetric_xs = .false.
@@ -39,6 +42,9 @@ SUBROUTINE init ( config_flags )
    TYPE (grid_config_rec_type) :: config_flags
    config_flags%h_sca_adv_order = 5
    config_flags%v_sca_adv_order = 3
+   config_flags%cpm_meso_pblh = 1
+   config_flags%cpm_meso_hfx = 1
+   config_flags%cpm_opt = 1
    config_flags%periodic_x = .true.
    config_flags%periodic_y = .true.
    config_flags%symmetric_xs = .false.

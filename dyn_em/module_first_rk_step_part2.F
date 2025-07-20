@@ -61,7 +61,7 @@ CONTAINS
 
     USE module_sfs_driver !JDM
     USE module_stoch, ONLY : update_stoch_ten, perturb_physics_tend, RAND_PERT_UPDATE, contiguize_2d
-
+    USE module_les_cpm
 
     IMPLICIT NONE
 
@@ -497,6 +497,94 @@ BENCH_START(tke_diff_bc_tim)
          ENDDO
          !$OMP END PARALLEL DO
 BENCH_END(tke_diff_bc_tim)
+
+! JDM MMC starts ------------------------------------------------------------------------------
+
+! The following code blocks are for the cell perturbation method, CPM.
+! The first block forces down the mesoscale PBLH computed using a mesoscale PBL scheme.
+! The second block forces down HFX computed on a mesoscale domain.
+! The third block applies the CPM.
+
+         IF ( ( config_flags%cpm_meso_pblh .EQ. 1 ) .AND. ( config_flags%km_opt .EQ. 4 ) ) THEN   
+
+            !$OMP PARALLEL DO   &
+            !$OMP PRIVATE ( ij )
+            DO ij = 1 , grid%num_tiles
+               
+               CALL force_down_meso_pblh( grid%meso_pblh, grid%pblh,         &   
+                                          ids, ide, jds, jde, kds, kde,      &
+                                          ims, ime, jms, jme, kms, kme,      &
+                                          grid%i_start(ij), grid%i_end(ij),  &
+                                          grid%j_start(ij), grid%j_end(ij),  &
+                                          k_start, k_end                     )
+               
+            ENDDO
+            !$OMP END PARALLEL DO
+                        
+         ENDIF
+                  
+         IF ( ( config_flags%cpm_meso_hfx .EQ. 1 ) .AND. ( config_flags%km_opt .EQ. 4 ) ) THEN   
+
+            !$OMP PARALLEL DO   &
+            !$OMP PRIVATE ( ij )
+            DO ij = 1 , grid%num_tiles
+               
+               CALL force_down_meso_hfx( grid%meso_hfx, grid%hfx, grid%rho,  &   
+                                         ids, ide, jds, jde, kds, kde,       &
+                                         ims, ime, jms, jme, kms, kme,       &
+                                         grid%i_start(ij), grid%i_end(ij),   &
+                                         grid%j_start(ij), grid%j_end(ij),   & 
+                                         k_start, k_end                      )
+               
+            ENDDO
+            !$OMP END PARALLEL DO
+                        
+         ENDIF
+         
+         IF (  config_flags%cpm_opt .GT. 0 ) THEN   
+            
+            !$OMP PARALLEL DO   &
+            !$OMP PRIVATE ( ij )
+            DO ij = 1 , grid%num_tiles
+
+               CALL calc_cpm ( config_flags%cpm_opt,                        &
+                               config_flags%cpm_lim_z,                      &
+                               config_flags%cpm_amp,                        &
+                               config_flags%cpm_pec,                        &
+                               config_flags%cpm_rim,                        &
+                               config_flags%cpm_dt,                         &
+                               config_flags%cpm_lambda,                     &
+                               config_flags%cpm_nb,                         &
+                               config_flags%cpm_sb,                         & 
+                               config_flags%cpm_eb,                         &
+                               config_flags%cpm_wb,                         &
+                               config_flags%cpm_ngc_h,                      &
+                               config_flags%cpm_ncells_h,                   &
+                               config_flags%cpm_noff_h,                     &
+                               config_flags%cpm_ngc_v,                      &
+                               config_flags%cpm_noff_v,                     &
+                               config_flags%spec_bdy_width,                 &
+                               grid%prttms, grid%prtdt,                     &
+                               grid%prtseed, grid%cpm_3d,                   &  
+                               config_flags%cpm_meso_pblh, grid%meso_pblh,  &
+                               config_flags%cpm_pblh_check,                 &
+                               config_flags%cpm_meso_hfx, grid%meso_hfx,    &
+                               config_flags%spec_hfx,                       &
+                               grid%t_2, grid%u_2, grid%v_2, grid%w_2,      &
+                               grid%rho, grid%z, grid%dx, grid%dt,          &
+                               grid%fnm, grid%fnp,                          &
+                               ids, ide, jds, jde, kds, kde,                &
+                               ims, ime, jms, jme, kms, kme,                &
+                               grid%i_start(ij), grid%i_end(ij),            &
+                               grid%j_start(ij), grid%j_end(ij),            &
+                               k_start, k_end                               )
+
+            ENDDO
+            !$OMP END PARALLEL DO
+
+         ENDIF
+
+! JDM MMC ends --------------------------------------------------------------------------------
 
 BENCH_START(deform_div_tim)
 

@@ -23,7 +23,8 @@ MODULES =                 		\
         module_first_rk_step_part2.o    \
         module_avgflx_em.o              \
 	  module_sfs_nba.o		\
-        module_convtrans_prep.o         \
+         module_les_cpm.o               \
+         module_convtrans_prep.o         \
 	  module_sfs_driver.o		\
 	  module_stoch.o			\
 	  module_after_all_rk_steps.o	\

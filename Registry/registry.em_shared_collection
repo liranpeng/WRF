@@ -14,6 +14,7 @@ include registry.stoch
 include registry.les
 include registry.cam
 include registry.clm
+indlude registry.les_cpm
 include registry.lake
 include registry.ssib
 include registry.noahmp
@@ -27,5 +28,6 @@ include registry.hyb_coord
 include registry.new3d_wif
 include registry.trad_fields
 include registry.solar_fields
+include registry.les_cpm
 include registry.diags
 include registry.CMAQ

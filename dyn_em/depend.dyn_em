@@ -306,6 +306,8 @@ module_first_rk_step_part2.o : \
                 module_bc_em.o         \
                 module_stoch.o         \
 		module_sfs_driver.o \
+		module_advect_em.o       \
+                module_les_cpm.o    \
 		module_big_step_utilities_em.o \
 		../frame/module_domain.o \
 		../frame/module_state_description.o \
@@ -328,6 +330,10 @@ adapt_timestep_em.o: \
                 module_bc_em.o         \
 		../frame/module_domain.o \
 		../frame/module_configure.o  \
+		../frame/module_dm.o
+
+module_les_cpm.o: \
+		../share/module_model_constants.o \
 		../frame/module_dm.o
 
 #		../chem/module_chem_utilities.o \
