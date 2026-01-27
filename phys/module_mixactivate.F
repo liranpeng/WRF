@@ -1768,7 +1768,7 @@ OLD_CLOUD_NSUBMIX_LOOP: do nsub=1,nsubmix
 !      2. Multiple aerosol types. J. Geophys. Res., 105, 6837-6844.
 
       USE module_model_constants, only: g,rhowater, xlv, cp, rvovrd, r_d, r_v, &
-              mwdry,svp1,svp2,svp3,ep_2
+              mwdry,ep_2
 
       implicit none
 
@@ -1835,6 +1835,11 @@ OLD_CLOUD_NSUBMIX_LOOP: do nsub=1,nsubmix
       real diff0,conduct0
       real es ! saturation vapor pressure
       real qs ! water vapor saturation mixing ratio
+      real esw, esi ! saturation vapor pressure over water and ice
+      real qvsw, qvsi ! saturation mixing ratio over water and ice
+      real qvs_weight ! weighted saturation mixing ratio
+      real tc ! temperature in Celsius
+      real weight_ice ! ice/water weight for saturation calculation
       real dqsdt ! change in qs with temperature
       real dqsdp ! change in qs with pressure
       real gg ! thermodynamic function (m2/s)
@@ -1896,6 +1901,15 @@ OLD_CLOUD_NSUBMIX_LOOP: do nsub=1,nsubmix
       real, parameter :: sq2  = 1.4142135624
       real, parameter :: sqpi = 1.7724538509
       real, parameter :: pi   = 3.1415926536
+
+!     Constants for ice saturation (matching module_radiation_driver.F)
+      real, parameter :: SVP1_rad  = 0.61078
+      real, parameter :: SVP2_rad  = 17.2693882    ! for water
+      real, parameter :: SVPI2_rad = 21.8745584    ! for ice
+      real, parameter :: SVP3_rad  = 35.86         ! for water
+      real, parameter :: SVPI3_rad = 7.66          ! for ice
+      real, parameter :: SVPT0_rad = 273.15
+      real, parameter :: QCLDMIN_rad = 1.E-12
 
 !      integer, save :: ndist(nx)  ! accumulates frequency distribution of integration bins required
 !      data ndist/nx*0/
@@ -1992,8 +2006,25 @@ OLD_CLOUD_NSUBMIX_LOOP: do nsub=1,nsubmix
       pres=r_d*rhoair*tair
       diff0=0.211e-4*(p0/pres)*(tair/t0)**1.94
       conduct0=(5.69+0.017*(tair-t0))*4.186e2*1.e-5 ! convert to J/m/s/deg
-      es=1000.*svp1*exp( svp2*(tair-t0)/(tair-svp3) )
-      qs=ep_2*es/(pres-es)
+!     Calculate saturation vapor pressure and mixing ratio using ice/water weighting
+!     (matching module_radiation_driver.F approach)
+      tc = tair - SVPT0_rad
+      esw = 1000.0 * SVP1_rad * exp( SVP2_rad * tc / ( tair - SVP3_rad ) )
+      esi = 1000.0 * SVP1_rad * exp( SVPI2_rad * tc / ( tair - SVPI3_rad ) )
+      qvsw = ep_2 * esw / ( pres - esw )
+      qvsi = ep_2 * esi / ( pres - esi )
+!     Temperature-based weight: pure liquid above 273.15K, pure ice below 253.15K
+      if (tair .gt. SVPT0_rad) then
+         weight_ice = 0.0
+      else if (tair .lt. SVPT0_rad - 20.0) then
+         weight_ice = 1.0
+      else
+         weight_ice = (SVPT0_rad - tair) / 20.0
+      endif
+      qvs_weight = (1.0 - weight_ice) * qvsw + weight_ice * qvsi
+!     Use weighted saturation for activation calculations
+      es = (1.0 - weight_ice) * esw + weight_ice * esi
+      qs = qvs_weight
       dqsdt=xlv/(r_v*tair*tair)*qs
       alpha=g*(xlv/(cp*r_v*tair*tair)-1./(r_d*tair))
       gamma=(1+xlv/cp*dqsdt)/(rhoair*qs)
@@ -2965,7 +2996,7 @@ OLD_CLOUD_NSUBMIX_LOOP: do nsub=1,nsubmix
 !      2. Multiple aerosol types. J. Geophys. Res., 105, 6837-6844.
       use module_wrf_error , only : wrf_err_message
       USE module_model_constants, only: g,rhowater, xlv, cp, rvovrd, r_d, r_v, &
-              mwdry,svp1,svp2,svp3,ep_2
+              mwdry,ep_2
 
       ! Liran add ML start ====================================
       use, intrinsic :: iso_c_binding
@@ -3043,6 +3074,11 @@ OLD_CLOUD_NSUBMIX_LOOP: do nsub=1,nsubmix
       real diff0,conduct0
       real es ! saturation vapor pressure
       real qs ! water vapor saturation mixing ratio
+      real esw, esi ! saturation vapor pressure over water and ice
+      real qvsw, qvsi ! saturation mixing ratio over water and ice
+      real qvs_weight ! weighted saturation mixing ratio
+      real tc ! temperature in Celsius
+      real weight_ice ! ice/water weight for saturation calculation
       real dqsdt ! change in qs with temperature
       real dqsdp ! change in qs with pressure
       real gg ! thermodynamic function (m2/s)
@@ -3131,6 +3167,15 @@ OLD_CLOUD_NSUBMIX_LOOP: do nsub=1,nsubmix
       real, parameter :: sq2  = 1.4142135624
       real, parameter :: sqpi = 1.7724538509
       real, parameter :: pi   = 3.1415926536
+
+!     Constants for ice saturation (matching module_radiation_driver.F)
+      real, parameter :: SVP1_rad  = 0.61078
+      real, parameter :: SVP2_rad  = 17.2693882    ! for water
+      real, parameter :: SVPI2_rad = 21.8745584    ! for ice
+      real, parameter :: SVP3_rad  = 35.86         ! for water
+      real, parameter :: SVPI3_rad = 7.66          ! for ice
+      real, parameter :: SVPT0_rad = 273.15
+      real, parameter :: QCLDMIN_rad = 1.E-12
 
 !      integer, save :: ndist(nx)  ! accumulates frequency distribution of integration bins required
 !      data ndist/nx*0/
@@ -3227,8 +3272,25 @@ OLD_CLOUD_NSUBMIX_LOOP: do nsub=1,nsubmix
       pres=r_d*rhoair*tair
       diff0=0.211e-4*(p0/pres)*(tair/t0)**1.94
       conduct0=(5.69+0.017*(tair-t0))*4.186e2*1.e-5 ! convert to J/m/s/deg
-      es=1000.*svp1*exp( svp2*(tair-t0)/(tair-svp3) )
-      qs=ep_2*es/(pres-es)
+!     Calculate saturation vapor pressure and mixing ratio using ice/water weighting
+!     (matching module_radiation_driver.F approach)
+      tc = tair - SVPT0_rad
+      esw = 1000.0 * SVP1_rad * exp( SVP2_rad * tc / ( tair - SVP3_rad ) )
+      esi = 1000.0 * SVP1_rad * exp( SVPI2_rad * tc / ( tair - SVPI3_rad ) )
+      qvsw = ep_2 * esw / ( pres - esw )
+      qvsi = ep_2 * esi / ( pres - esi )
+!     Temperature-based weight: pure liquid above 273.15K, pure ice below 253.15K
+      if (tair .gt. SVPT0_rad) then
+         weight_ice = 0.0
+      else if (tair .lt. SVPT0_rad - 20.0) then
+         weight_ice = 1.0
+      else
+         weight_ice = (SVPT0_rad - tair) / 20.0
+      endif
+      qvs_weight = (1.0 - weight_ice) * qvsw + weight_ice * qvsi
+!     Use weighted saturation for activation calculations
+      es = (1.0 - weight_ice) * esw + weight_ice * esi
+      qs = qvs_weight
       dqsdt=xlv/(r_v*tair*tair)*qs
       alpha=g*(xlv/(cp*r_v*tair*tair)-1./(r_d*tair))
       gamma=(1+xlv/cp*dqsdt)/(rhoair*qs)
