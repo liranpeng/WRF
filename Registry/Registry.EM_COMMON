@@ -1697,6 +1697,7 @@ state    real  RTHRATENLWC     ikj      misc        1         -      r        "R
 state    real  RTHRATENSW      ikj      misc        1         -      r        "RTHRATSW"              "UNCOUPLED THETA TENDENCY DUE TO SHORT WAVE RADIATION"   "K s-1"
 state    real  RTHRATENSWC     ikj      misc        1         -      r        "RTHRATSWC"             "UNCOUPLED THETA TEND DUE TO CLEAR SKY SHORT WAVE RAD"   "K s-1"
 state    real  CLDFRA          ikj      misc        1         -      irh      "CLDFRA"                "CLOUD FRACTION"   ""
+state    real  RHML            ikj      misc        1         -      irh      "RH"                    "RELATIVE HUMIDITY"   ""
 state    real  CONVCLD          ij      misc        1         -      r        "CONVCLD"               "BMJ CONVECTIVE CLOUD" "kg m-2"
 state    real  CCLDFRA         ikj      misc        1         -      r        "CCLDFRA"               "CONVECTIVE CLOUD FRACTION" ""
 state    real  CLDFRA_OLD      ikj      misc        1         -      r        "CLDFRA_OLD"            "previous time level cldfra"                           ""
@@ -3024,7 +3025,7 @@ package   nuwrf4icescheme mp_physics==7              -               moist:qv,qc
 package   thompson        mp_physics==8                -             moist:qv,qc,qr,qi,qs,qg;scalar:qni,qnr;state:re_cloud,re_ice,re_snow
 package   milbrandt2mom   mp_physics==9                -             moist:qv,qc,qr,qi,qs,qg,qh;scalar:qnc,qnr,qni,qns,qng,qnh
 package   morr_two_moment mp_physics==10               -             moist:qv,qc,qr,qi,qs,qg;scalar:qni,qns,qnr,qng;state:rqrcuten,rqscuten,rqicuten
-package   cammgmpscheme   mp_physics==11               -             moist:qv,qc,qi,qr,qs;scalar:qnc,qni,qnr,qns;state:rh_old_mp,lcd_old_mp,cldfra_old_mp,cldfra_mp,cldfra_mp_all,cldfra_conv,cldfrai,cldfral,turbtype3d,smaw3d,wsedl3d,icwmrdp3d,dp3d,shfrc3d,dlf,dlf2,tke_pbl,lradius,iradius
+package   cammgmpscheme   mp_physics==11               -             moist:qv,qc,qi,qr,qs;scalar:qnc,qni,qnr,qns;state:rh_old_mp,lcd_old_mp,cldfra_old_mp,rhml,cldfra_mp,cldfra_mp_all,cldfra_conv,cldfrai,cldfral,turbtype3d,smaw3d,wsedl3d,icwmrdp3d,dp3d,shfrc3d,dlf,dlf2,tke_pbl,lradius,iradius
 #package   milbrandt3mom  mp_physics==12               -             moist:qv,qc,qr,qi,qs,qg,qh;scalar:qnc,qnr,qni,qns,qng,qnh,qzr,qzi,qzs,qzg,qzh
 package   sbu_ylinscheme  mp_physics==13               -             moist:qv,qc,qr,qi,qs;state:rimi
 package   wdm5scheme      mp_physics==14               -             moist:qv,qc,qr,qi,qs;scalar:qnn,qnc,qnr;state:re_cloud,re_ice,re_snow

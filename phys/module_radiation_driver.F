@@ -91,7 +91,7 @@ CONTAINS
               , RE_HAIL_GSFC                                              &
               , COD2D_OUT                                                 &
               , CTOP2D_OUT                                                &
-              , CLDFRA,CLDFRA_MP_ALL,CLDT,ZNU                             &
+              , CLDFRA,RH_ML,CLDFRA_MP_ALL,CLDT,ZNU                             &
               , CCLDFRA, QCCONV, QICONV                                   &
               , bmj_rad_feedback                                          &
 #if (EM_CORE == 1)
@@ -834,6 +834,9 @@ CONTAINS
 !
    REAL, DIMENSION( ims:ime, kms:kme, jms:jme ),                  &
          OPTIONAL,                                                &
+         INTENT(OUT) ::                                 RH_ML
+   REAL, DIMENSION( ims:ime, kms:kme, jms:jme ),                  &
+         OPTIONAL,                                                &
          INTENT(INOUT) ::                                 CLDFRA, &
                                                           CCLDFRA,&
                                                           QCCONV, &
@@ -1323,7 +1326,7 @@ CONTAINS
 ! Call to cloud fraction routine based on Randall 1994 (Hong Pan 1998)
 
         CALL wrf_debug (1, 'CALL cldfra1')
-        CALL cal_cldfra1(CLDFRA,qv,qc,qi,qs,               &
+        CALL cal_cldfra1(CLDFRA,RH_ML,qv,qc,qi,qs,               &
                    F_QV,F_QC,F_QI,F_QS,t,p,                &
                    F_ICE_PHY,F_RAIN_PHY,                   &
                    mp_physics,cldfra1_flag,                &
@@ -3758,7 +3761,7 @@ CONTAINS
 !!     (see Hong et al., 1998)
 !!     (modified by Ferrier, Feb '02)
 !
-   SUBROUTINE cal_cldfra1(CLDFRA, QV, QC, QI, QS,                    &
+   SUBROUTINE cal_cldfra1(CLDFRA, RH_ML, QV, QC, QI, QS,                    &
                          F_QV, F_QC, F_QI, F_QS, t_phy, p_phy,       &
                          F_ICE_PHY,F_RAIN_PHY,                       &
                          mp_physics, cldfra1_flag,                   &
@@ -3778,7 +3781,7 @@ CONTAINS
 !
    INTEGER, DIMENSION( ims:ime, kms:kme, jms:jme ), INTENT(OUT  ) :: cldfra1_flag
    REAL, DIMENSION( ims:ime, kms:kme, jms:jme ), INTENT(OUT  ) ::    &
-                                                             CLDFRA
+                                                             CLDFRA,RH_ML
 
    REAL, DIMENSION( ims:ime, kms:kme, jms:jme ), INTENT(IN   ) ::    &
                                                                  QV, &
@@ -3801,6 +3804,7 @@ CONTAINS
 
 !  REAL thresh
    INTEGER:: i,j,k
+   character(len=256) :: msg
    REAL    :: RHUM, tc, esw, esi, weight, qvsw, qvsi, qvs_weight, QIMID, QWMID, QCLD, DENOM, ARG, SUBSAT
 
    REAL    ,PARAMETER :: ALPHA0=100., GAMMA=0.49, QCLDMIN=1.E-12,    &
@@ -3944,6 +3948,7 @@ CONTAINS
 
       QVS_WEIGHT = (1-weight)*QVSW + weight*QVSI
       RHUM=QV(i,k,j)/QVS_WEIGHT   !--- Relative humidity
+      RH_ML(i,k,j)=RHUM
 !
 !--- Determine cloud fraction (modified from original algorithm)
 !
@@ -3958,9 +3963,14 @@ CONTAINS
 !
 !--- Assume cloud fraction of unity if near saturation and the cloud
 !    mixing ratio is at or above the minimum threshold
+
 !
         CLDFRA(i,k,j)=1.
         cldfra1_flag(i,k,j) = 2
+        WRITE( msg,* ) 'RHUM: ', RHUM
+        CALL wrf_debug ( 15 , TRIM(msg) )
+        WRITE( msg,* ) 'RHGRID: ', RHGRID
+        CALL wrf_debug ( 15 , TRIM(msg) )
       ELSE
          cldfra1_flag(i,k,j) = 3
 !
@@ -3976,6 +3986,18 @@ CONTAINS
 !!              ARG=-1000*QCLD/(RHUM-RHGRID)
 !!              ARG=MAX(ARG, ARGMIN)
 !!              CLDFRA(i,k,j)=(RHUM/RHGRID)*(1.-EXP(ARG))
+
+        WRITE( msg,* ) 'SUBSAT: ', SUBSAT
+        CALL wrf_debug ( 15 , TRIM(msg) )
+        WRITE( msg,* ) 'DENOM: ', DENOM
+        CALL wrf_debug ( 15 , TRIM(msg) )
+        WRITE( msg,* ) 'ARG: ', ARG
+        CALL wrf_debug ( 15 , TRIM(msg) )
+        WRITE( msg,* ) 'RHUM: ', RHUM
+        CALL wrf_debug ( 15 , TRIM(msg) )
+        WRITE( msg,* ) 'CLDFRA: ', CLDFRA(i,k,j)
+        CALL wrf_debug ( 15 , TRIM(msg) )
+        RH_ML(i,k,j)=RHUM
         IF (CLDFRA(i,k,j) .LT. .01) CLDFRA(i,k,j)=0.
            
      ENDIF          !--- End IF (QCLD .LT. QCLDMIN) ...     

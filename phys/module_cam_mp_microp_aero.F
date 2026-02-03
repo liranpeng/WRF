@@ -716,7 +716,7 @@ subroutine ini_microp_aero
 
 ! get droplet activation rate
 
-        call activate(wsub(i,k),t(i,k),rho(i,k), &
+        call activate_ml(wsub(i,k),t(i,k),rho(i,k),relhum(i,k), &
                  naer2(i,k,:), naer_all,naer_all, maerosol,  &
                  dispersion_aer,hygro_aer, density_aer, dum2)
 	dum = dum2
@@ -892,6 +892,250 @@ subroutine ini_microp_aero
 return
 end subroutine microp_aero_ts
 
+
+!##############################################################################
+      subroutine activate_ml(wbar, tair, rhoair, relhum, &
+                          na, pmode, nmode, ma, sigman, hygro, rhodry, nact)
+
+!      calculates number fraction of aerosols activated as CCN
+!      assumes an internal mixture within each of up to pmode multiple aerosol modes
+!      a gaussiam spectrum of updrafts can be treated.
+
+!      mks units
+
+!      Abdul-Razzak and Ghan, A parameterization of aerosol activation.
+!      2. Multiple aerosol types. J. Geophys. Res., 105, 6837-6844.
+
+      use physconst, only: rair, epsilo, cpair, rh2o, latvap, gravit,   &
+                                 rhoh2o, mwh2o, r_universal
+      ! Liran added ML start ========================================
+      use wv_saturation, only: estblf, epsqs
+      use ftorch, only: torch_model, torch_tensor, torch_model_load, &
+                  torch_kCPU, torch_kCUDA
+      ! Liran added ML end ========================================
+      implicit none
+
+
+!      input
+
+      integer pmode,ptype ! dimension of modes, types in modes
+      real(r8) wbar          ! grid cell mean vertical velocity (m/s)
+      real(r8) tair          ! air temperature (K)
+      real(r8) rhoair        ! air density (kg/m3)
+      real(r8) relhum        ! relative humidity
+      real(r8) na(pmode)           ! aerosol number concentration (/m3)
+      integer nmode      ! number of aerosol modes
+      real(r8) ma(pmode)     ! aerosol mass concentration (kg/m3)
+      real(r8) rhodry(pmode) ! density of aerosol material
+
+      real(r8) sigman(pmode)  ! geometric standard deviation of aerosol size distribution
+      real(r8) hygro(pmode)  ! hygroscopicity of aerosol mode
+
+
+!      output
+
+      real(r8) nact      ! number fraction of aerosols activated
+
+!      local
+
+!      external erf,erfc
+!      real(r8) erf,erfc
+#if (defined AIX)
+#define ERF erf
+#define ERFC erfc
+#else
+#define ERF derf
+#define ERFC derfc
+      real(r8) derf,derfc
+#endif
+
+      integer, parameter:: nx=200
+      integer :: maxmodes
+      real(r8) surften       ! surface tension of water w/respect to air (N/m)
+      data surften/0.076/
+      save surften
+      real(r8) p0     ! reference pressure (Pa)
+      data p0/1013.25e2/
+      save p0
+
+      real(r8), allocatable :: volc(:) ! total aerosol volume  concentration (m3/m3)
+      real(r8) tmass ! total aerosol mass concentration (g/cm3)
+      real(r8) rm ! number mode radius of aerosol at max supersat (cm)
+      real(r8) pres ! pressure (Pa)
+      real(r8) path ! mean free path (m)
+      real(r8) diff ! diffusivity (m2/s)
+      real(r8) conduct ! thermal conductivity (Joule/m/sec/deg)
+      real(r8) diff0,conduct0
+      real(r8) qs ! water vapor saturation mixing ratio
+      real(r8) dqsdt ! change in qs with temperature
+      real(r8) dqsdp ! change in qs with pressure
+      real(r8) gloc ! thermodynamic function (m2/s)
+      real(r8) zeta
+      real(r8), allocatable :: eta(:)
+      real(r8), allocatable :: smc(:)
+      real(r8) lnsmax ! ln(smax)
+      real(r8) alpha
+      real(r8) gammaloc
+      real(r8) beta
+      real(r8) sqrtg
+      real(r8) alogam
+      real(r8) rlo,rhi,xint1,xint2,xint3,xint4
+      real(r8) w,wnuc,wb
+
+      real(r8) alw,sqrtalw
+      real(r8) smax
+      real(r8) x,arg
+      real(r8) xmincoeff,xcut,volcut,surfcut
+      real(r8) z,z1,z2,wf1,wf2,zf1,zf2,gf1,gf2,gf
+      real(r8) :: etafactor1,etafactor2max
+      real(r8),allocatable :: etafactor2(:)
+      real(r8) es
+      integer m,n
+      ! FTorch variables
+      type(torch_model), save :: ml_model
+      type(torch_tensor), dimension(1) :: model_input_tensor
+      type(torch_tensor), dimension(1) :: model_output_tensor
+      logical, save :: model_loaded = .false.
+
+      ! runtime device selection
+      integer :: device_type, device_index, istat, ios
+      character(len=32) :: devstr
+      real(r8),allocatable :: amcubeloc(:)
+      real(r8),allocatable :: lnsmloc(:)
+
+
+      ! Liran added ML start ========================================
+      ! Load model on first call
+      if (.not. model_loaded) then
+         ! default to CPU unless FTORCH_DEVICE says otherwise
+         device_type  = torch_kCPU
+         device_index = 0
+         devstr = '' ; istat = 1 ; ios = 0
+         call get_environment_variable('FTORCH_DEVICE', devstr, status=istat)
+         if (istat == 0) then
+            if (index(adjustl(devstr), 'cuda') == 1) then
+               device_type = torch_kCUDA
+               device_index = 0
+               ! parse optional index in the form "cuda:NN"
+               if (len_trim(devstr) > 5 .and. devstr(5:5) == ':') then
+                  read(devstr(6:), *, iostat=ios) device_index
+                  if (ios /= 0) device_index = 0
+               end if
+            else
+               device_type = torch_kCPU
+               device_index = 0
+            end if
+         end if
+
+         call torch_model_load( ml_model, &
+            '/pscratch/sd/y/yanxia/PINN_Parcel_Model/artifacts/deployment/mlp_wrapper.pt', &
+            device_type, device_index )
+
+         model_loaded = .true.
+         print *, 'ML activation model loaded successfully (device_type=', device_type, &
+                  ', device_index=', device_index, ')'
+      end if
+      ! Liran added ML end ========================================
+
+      maxmodes = naer_all
+      allocate( &
+         volc(maxmodes),       &
+         eta(maxmodes),        &
+         smc(maxmodes),        &
+         etafactor2(maxmodes), &
+         amcubeloc(maxmodes),  &
+         lnsmloc(maxmodes)     )
+    
+      if(maxmodes<pmode)then
+         write(iulog,*)'maxmodes,pmode in activate =',maxmodes,pmode
+#ifdef WRF_PORT
+         call wrf_message(iulog)
+#endif 
+	 call endrun('activate')
+      endif
+
+      nact=0._r8
+
+      if(nmode.eq.1.and.na(1).lt.1.e-20)return
+
+      if(wbar.le.0.)return
+
+      pres=rair*rhoair*tair
+      diff0=0.211e-4*(p0/pres)*(tair/tt0)**1.94
+      conduct0=(5.69+0.017*(tair-tt0))*4.186e2*1.e-5 ! convert to J/m/s/deg
+      es = estblf(tair)
+      qs = epsilo*es/(pres-(1.0_r8 - epsqs)*es)
+      dqsdt=latvap/(rh2o*tair*tair)*qs
+      alpha=gravit*(latvap/(cpair*rh2o*tair*tair)-1./(rair*tair))
+      gammaloc=(1+latvap/cpair*dqsdt)/(rhoair*qs)
+!     growth coefficent Abdul-Razzak & Ghan 1998 eqn 16
+!     should depend on mean radius of mode to account for gas kinetic effects
+      gloc=1./(rhoh2o/(diff0*rhoair*qs)                                    &
+          +latvap*rhoh2o/(conduct0*tair)*(latvap/(rh2o*tair)-1.))
+      sqrtg=sqrt(gloc)
+      beta=4.*pi*rhoh2o*gloc*gammaloc
+      etafactor2max=1.e10/(alpha*wbar)**1.5 ! this should make eta big if na is very small.
+
+      do m=1,nmode
+!         internal mixture of aerosols
+          volc(m)=ma(m)/(rhodry(m)) ! only if variable size dist
+! pjj/cray - use TINY intrinsic
+!        if(volc(m).gt.1.e-39.and.na(m).gt.1.e-39)then
+         if(volc(m).gt. TINY(volc) .and.na(m).gt. TINY(na))then
+            etafactor2(m)=1./(na(m)*beta*sqrtg)  !fixed or variable size dist
+!            number mode radius (m)
+            amcubeloc(m)=(3.*volc(m)/(4.*pi*exp45logsig(m)*na(m)))  ! only if variable size dist
+	    smc(m)=smcrit(m) ! only for prescribed size dist
+
+            if(hygro(m).gt.1.e-10)then   ! loop only if variable size dist
+               smc(m)=2.*aten*sqrt(aten/(27.*hygro(m)*amcubeloc(m))) 
+            else
+              smc(m)=100.
+            endif
+         else
+            smc(m)=1.
+	    etafactor2(m)=etafactor2max ! this should make eta big if na is very small.
+         endif
+         lnsmloc(m)=log(smc(m)) ! only if variable size dist
+      enddo
+
+!         single  updraft
+         wnuc=wbar
+
+            w=wbar
+            alw=alpha*wnuc
+            sqrtalw=sqrt(alw)
+            zeta=2.*sqrtalw*aten/(3.*sqrtg)
+	    etafactor1=2.*alw*sqrtalw
+
+            do m=1,nmode
+               eta(m)=etafactor1*etafactor2(m)
+            enddo
+
+            call maxsat(zeta,eta,nmode,smc,smax)
+
+            lnsmax=log(smax)
+            xmincoeff=alogaten-2.*third*(lnsmax-alog2)-alog3
+
+	    nact=0._r8
+            do m=1,nmode
+	       x=2*(lnsmloc(m)-lnsmax)/(3*sq2*alogsig(m))
+               nact=nact+0.5*(1.-erf(x))*na(m)
+            enddo
+	    nact=nact/rhoair ! convert from #/m3 to #/kg
+
+      deallocate( &
+         volc,       &
+         eta,        &
+         smc,        &
+         etafactor2, &
+         amcubeloc,  &
+         lnsmloc     )
+
+      return
+      end subroutine activate_ml
+
+
 !##############################################################################
 
       subroutine activate(wbar, tair, rhoair,  &
@@ -999,7 +1243,7 @@ end subroutine microp_aero_ts
          etafactor2(maxmodes), &
          amcubeloc(maxmodes),  &
          lnsmloc(maxmodes)     )
-
+    
       if(maxmodes<pmode)then
          write(iulog,*)'maxmodes,pmode in activate =',maxmodes,pmode
 #ifdef WRF_PORT

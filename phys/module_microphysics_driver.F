@@ -14,7 +14,8 @@ SUBROUTINE microphysics_driver(                                          &
                       ,warm_rain                                         &
                       ,t8w                                               &
                       ,chem_opt, progn                                   &
-                      ,cldfra, cldfra_old, exch_h, nsource               &
+                      ,cldfra, rh_ml, rqvblten,rqvshten,rqvcuten         &
+                      ,cldfra_old, exch_h, nsource                       &
                       ,qlsink, precr, preci, precs, precg                &
                       ,xland,snowh,itimestep                             &
                       ,f_ice_phy,f_rain_phy,f_rimef_phy                  &
@@ -628,7 +629,7 @@ REAL, DIMENSION( ims:ime, kms:kme, jms:jme ),                        &
          OPTIONAL,                                                &
          INTENT(INOUT ) ::                                        &
                   u,v,w, z, t8w                                       &
-                 ,cldfra, cldfra_old, exch_h                      &
+                 ,cldfra, rh_ml, rqvblten,rqvshten,rqvcuten, cldfra_old, exch_h                      &
                  ,qv_curr,qc_curr,qr_curr,qi_curr,qs_curr,qg_curr &
                  ,qt_curr,qndrop_curr,qni_curr,qh_curr,qnh_curr   &
                  ,qns_curr,qnr_curr,qng_curr,qnn_curr,qnc_curr    &
@@ -921,7 +922,8 @@ REAL, DIMENSION( ims:ime, kms:kme, jms:jme ),                        &
              call prescribe_aerosol_mixactivate (               &
                   id, itimestep, dt, naer,                      &
                   ccn_conc, chem_opt,                           & !RAS13.1
-                  rho, th, pi_phy, w, cldfra, cldfra_old,       &
+                  rho, th, p, pi_phy, w, cldfra, rh_ml,         &
+                  rqvblten,rqvshten,rqvcuten, cldfra_old,       &
                   z, dz8w, p8w, t8w, exch_h,                    &
                   qv_curr, qc_curr, qi_curr, qndrop_curr,       &
                   nsource,                                      &

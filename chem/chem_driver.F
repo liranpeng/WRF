@@ -1048,7 +1048,7 @@
             call dry_dep_driver(grid%id,curr_secs,ktau,grid%dt,config_flags,          &
                  grid%gmt,ijulian,t_phy,moist,scalar,p8w,t8w,vvel,                &
                  rri,p_phy,chem,tracer,rho,dz8w,rh,grid%exch_h,grid%hfx,grid%dx,      & 
-                 grid%cldfra,grid%cldfra_old,grid%raincv_b,seasin,dustin,   &
+                 grid%cldfra,grid%rhml,grid%rqvblten,grid%rqvshten,grid%rqvcuten,grid%cldfra_old,grid%raincv_b,seasin,dustin,   &
            grid%fn11,grid%fn12,grid%fn13,grid%fn14,grid%fn21,grid%fn22,grid%fn23,grid%fn24,&
            grid%fn31,grid%fn32,grid%fn33,grid%fn34,grid%fn41,grid%fn42,grid%fn43,grid%fn44,&
            grid%na11,grid%na12,grid%na13,grid%na14,grid%na21,grid%na22,grid%na23,grid%na24,&

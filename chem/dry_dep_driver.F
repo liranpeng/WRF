@@ -14,7 +14,7 @@ CONTAINS
     subroutine dry_dep_driver(id,curr_secs,ktau,dtstep,config_flags,      &
                gmt,julday,t_phy,moist,scalar,p8w,t8w,w,alt,               &
                p_phy,chem,tracer,rho_phy,dz8w,rh,exch_h,hfx,dx,           &  
-               cldfra,cldfra_old,raincv,seasin,dustin,&
+               cldfra,rh_ml,rqvblten,rqvshten,rqvcuten,cldfra_old,raincv,seasin,dustin,&
                fn11,fn12,fn13,fn14,fn21,fn22,fn23,fn24,&
                fn31,fn32,fn33,fn34,fn41,fn42,fn43,fn44,&
                na11,na12,na13,na14,na21,na22,na23,na24,&
@@ -144,7 +144,7 @@ CONTAINS
                                           xland,znt,raincv,ash_fall
    REAL,  DIMENSION( ims:ime , kms:kme , jms:jme )         ,        &
           INTENT(INOUT ) ::                                     &
-                    cldfra,     & ! cloud fraction current timestep
+                    cldfra,rh_ml,rqvblten,rqvshten,rqvcuten,     & ! cloud fraction current timestep and RH for ML
                     cldfra_old    ! cloud fraction previous timestep
    REAL,  DIMENSION( ims:ime , jms:jme, 5 )                   ,    &
           INTENT(IN) ::            seasin,dustin 
@@ -1102,7 +1102,7 @@ CONTAINS
       CALL wrf_debug(15,'call mixactivate for LR sorgam aerosol')
       call sorgam_mixactivate (                        &
 		id, ktau, dtstep, config_flags, idrydep_onoff,   &
-		dryrho_phy, t_phy, w, cldfra, cldfra_old, &
+		dryrho_phy, t_phy, p_phy, w, cldfra, rh_ml,rqvblten,rqvshten,rqvcuten, cldfra_old, &
 		ddvel, z, dz8w, p8w, t8w, exch_h,         &
 		moist(ims,kms,jms,P_QV), moist(ims,kms,jms,P_QC), moist(ims,kms,jms,P_QI), &
         scalar(ims,kms,jms,P_QNDROP), f_qc, f_qi, chem,&
@@ -1128,7 +1128,7 @@ CONTAINS
       CALL wrf_debug(15,'call mixactivate for soa-vbs aerosol')
       call soa_vbs_mixactivate (                        &
                 id, ktau, dtstep, config_flags, idrydep_onoff,   &
-                dryrho_phy, t_phy, w, cldfra, cldfra_old, &
+                dryrho_phy, t_phy, p_phy, w, cldfra, rh_ml,rqvblten,rqvshten,rqvcuten, cldfra_old, &
                 ddvel, z, dz8w, p8w, t8w, exch_h,         &
                 moist(ims,kms,jms,P_QV), moist(ims,kms,jms,P_QC),moist(ims,kms,jms,P_QI), &
         scalar(ims,kms,jms,P_QNDROP), f_qc, f_qi, chem,&
@@ -1154,7 +1154,7 @@ CONTAINS
       CALL wrf_debug(15,'call mixactivate for sorgam_vbs aerosol')
       call sorgam_vbs_mixactivate (                        &
                 id, ktau, dtstep, config_flags, idrydep_onoff,   &
-                dryrho_phy, t_phy, w, cldfra, cldfra_old, &
+                dryrho_phy, t_phy, p_phy, w, cldfra, rh_ml,rqvblten,rqvshten,rqvcuten, cldfra_old, &
                 ddvel, z, dz8w, p8w, t8w, exch_h,         &
                 moist(ims,kms,jms,P_QV), moist(ims,kms,jms,P_QC), moist(ims,kms,jms,P_QI), &
         scalar(ims,kms,jms,P_QNDROP), f_qc, f_qi, chem, &
@@ -1183,7 +1183,7 @@ CONTAINS
       CALL wrf_debug(15,'call mixactivate for mosaic aerosol')
       call mosaic_mixactivate (                        &
 		id, ktau, dtstep, config_flags, idrydep_onoff,   &
-		dryrho_phy, t_phy, w, cldfra, cldfra_old, &
+		dryrho_phy, t_phy, p_phy, w, cldfra, rh_ml, rqvblten,rqvshten,rqvcuten,cldfra_old, &
 		ddvel, z, dz8w, p8w, t8w, exch_h,         &
 		moist(ims,kms,jms,P_QV), moist(ims,kms,jms,P_QC), moist(ims,kms,jms,P_QI), &
         scalar(ims,kms,jms,P_QNDROP), f_qc, f_qi, chem,&

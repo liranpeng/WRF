@@ -21,7 +21,7 @@ CONTAINS
 !----------------------------------------------------------------------
       subroutine mosaic_mixactivate (                        &
            id, ktau, dtstep, config_flags, idrydep_onoff,    &
-           rho_phy, t_phy, w, cldfra, cldfra_old,            &
+           rho_phy, t_phy, p_phy, w, cldfra, rh_ml, rqvblten,rqvshten,rqvcuten,cldfra_old,            &
            ddvel, z, dz8w, p_at_w, t_at_w, exch_h,           &
            qv, qc, qi, qndrop3d, f_qc, f_qi, chem,&
            fn11,fn12,fn13,fn14,fn21,fn22,fn23,fn24,&
@@ -65,11 +65,11 @@ CONTAINS
 
 	real, intent(in),   &
 		dimension( ims:ime, kms:kme, jms:jme ) :: &
-		rho_phy, t_phy, w,   &
+		rho_phy, t_phy, p_phy, w,   &
 		z, dz8w, p_at_w, t_at_w, exch_h
 
 	real, intent(inout),   &
-		dimension( ims:ime, kms:kme, jms:jme ) :: cldfra, cldfra_old
+		dimension( ims:ime, kms:kme, jms:jme ) :: cldfra, rh_ml, rqvblten,rqvshten,rqvcuten, cldfra_old
 
 	real, intent(in),   &
 		dimension( its:ite, jts:jte, num_chem ) :: ddvel
@@ -135,7 +135,7 @@ CONTAINS
 ! 06-nov-2005 rce - id & ktau added to arg list
       call mixactivate(  msectional, &
            chem, num_chem, qv, qc, qi, qndrop3d,   &
-           t_phy, w, ddvel, idrydep_onoff,  &
+           t_phy, p_phy, w, ddvel, idrydep_onoff,  &
            maxd_acomp, maxd_asize, maxd_atype, maxd_aphase,   &
            ncomp_aer, nsize_aer, ntype_aer, nphase_aer,  &
            numptr_aer, massptr_aer, dlo_sect, dhi_sect, sigmag_aer, dcen_sect,  &
@@ -145,7 +145,7 @@ CONTAINS
            ims,ime, jms,jme, kms,kme,                            &
            its,ite, jts,jte, kts,kte,                            &
            rho_phy, z, dz8w, p_at_w, t_at_w, exch_h,      &
-           cldfra, cldfra_old, qsrflx, &
+           cldfra, rh_ml, rqvblten,rqvshten,rqvcuten, cldfra_old, qsrflx,&
            fn11,fn12,fn13,fn14,fn21,fn22,fn23,fn24,&
            fn31,fn32,fn33,fn34,fn41,fn42,fn43,fn44,&
            na11,na12,na13,na14,na21,na22,na23,na24,&
@@ -246,7 +246,7 @@ CONTAINS
 
       subroutine sorgam_mixactivate (                        &
            id, ktau, dtstep, config_flags, idrydep_onoff,    &
-           rho_phy, t_phy, w, cldfra, cldfra_old,            &
+           rho_phy, t_phy, p_phy, w, cldfra, rh_ml, rqvblten,rqvshten,rqvcuten,cldfra_old,            &
            ddvel, z, dz8w, p_at_w, t_at_w, exch_h,           &
            qv, qc, qi, qndrop3d, f_qc, f_qi, chem,&
            fn11,fn12,fn13,fn14,fn21,fn22,fn23,fn24,&
@@ -289,11 +289,11 @@ CONTAINS
 
 	real, intent(in),   &
 		dimension( ims:ime, kms:kme, jms:jme ) :: &
-		rho_phy, t_phy, w,   &
+		rho_phy, t_phy, p_phy, w,   &
 		z, dz8w, p_at_w, t_at_w, exch_h
 
 	real, intent(inout),   &
-		dimension( ims:ime, kms:kme, jms:jme ) :: cldfra, cldfra_old
+		dimension( ims:ime, kms:kme, jms:jme ) :: cldfra, rh_ml, rqvblten,rqvshten,rqvcuten,cldfra_old
 
 	real, intent(in),   &
 		dimension( its:ite, jts:jte, num_chem ) :: ddvel
@@ -359,7 +359,7 @@ CONTAINS
 ! 06-nov-2005 rce - id & ktau added to arg list
       call mixactivate(  msectional, &
            chem, num_chem, qv, qc, qi, qndrop3d,   &
-           t_phy, w, ddvel, idrydep_onoff,  &
+           t_phy, p_phy, w, ddvel, idrydep_onoff,  &
            maxd_acomp, maxd_asize, maxd_atype, maxd_aphase,   &
            ncomp_aer, nsize_aer, ntype_aer, nphase_aer,  &
            numptr_aer, massptr_aer, dlo_sect, dhi_sect, sigmag_aer, dcen_sect,  &
@@ -369,7 +369,7 @@ CONTAINS
            ims,ime, jms,jme, kms,kme,                            &
            its,ite, jts,jte, kts,kte,                            &
            rho_phy, z, dz8w, p_at_w, t_at_w, exch_h,      &
-           cldfra, cldfra_old, qsrflx,&
+           cldfra, rh_ml, rqvblten,rqvshten,rqvcuten, cldfra_old, qsrflx,&
            fn11,fn12,fn13,fn14,fn21,fn22,fn23,fn24,&
            fn31,fn32,fn33,fn34,fn41,fn42,fn43,fn44,&
            na11,na12,na13,na14,na21,na22,na23,na24,&
@@ -393,7 +393,7 @@ CONTAINS
 !!! TUCCELLA
       subroutine soa_vbs_mixactivate (                       &
            id, ktau, dtstep, config_flags, idrydep_onoff,    &
-           rho_phy, t_phy, w, cldfra, cldfra_old,            &
+           rho_phy, t_phy, p_phy, w, cldfra, rh_ml, rqvblten,rqvshten,rqvcuten,cldfra_old,            &
            ddvel, z, dz8w, p_at_w, t_at_w, exch_h,           &
            qv, qc, qi, qndrop3d, f_qc, f_qi, chem,&
            fn11,fn12,fn13,fn14,fn21,fn22,fn23,fn24,&
@@ -436,11 +436,11 @@ CONTAINS
 
         real, intent(in),   &
                 dimension( ims:ime, kms:kme, jms:jme ) :: &
-                rho_phy, t_phy, w,   &
+                rho_phy, t_phy, p_phy, w,   &
                 z, dz8w, p_at_w, t_at_w, exch_h
 
         real, intent(inout),   &
-                dimension( ims:ime, kms:kme, jms:jme ) :: cldfra, cldfra_old
+                dimension( ims:ime, kms:kme, jms:jme ) :: cldfra, rh_ml, rqvblten,rqvshten,rqvcuten,cldfra_old
 
         real, intent(in),   &
                 dimension( its:ite, jts:jte, num_chem ) :: ddvel
@@ -504,7 +504,7 @@ CONTAINS
 ! 06-nov-2005 rce - id & ktau added to arg list
       call mixactivate(  msectional, &
            chem, num_chem, qv, qc, qi, qndrop3d,   &
-           t_phy, w, ddvel, idrydep_onoff,  &
+           t_phy, p_phy, w, ddvel, idrydep_onoff,  &
            maxd_acomp, maxd_asize, maxd_atype, maxd_aphase,   &
            ncomp_aer, nsize_aer, ntype_aer, nphase_aer,  &
            numptr_aer, massptr_aer, dlo_sect, dhi_sect, sigmag_aer, dcen_sect, &
@@ -514,7 +514,7 @@ CONTAINS
            ims,ime, jms,jme, kms,kme,                            &
            its,ite, jts,jte, kts,kte,                            &
            rho_phy, z, dz8w, p_at_w, t_at_w, exch_h,      &
-           cldfra, cldfra_old, qsrflx,&
+           cldfra, rh_ml, rqvblten,rqvshten,rqvcuten, cldfra_old, qsrflx,&
            fn11,fn12,fn13,fn14,fn21,fn22,fn23,fn24,&
            fn31,fn32,fn33,fn34,fn41,fn42,fn43,fn44,&
            na11,na12,na13,na14,na21,na22,na23,na24,&
@@ -537,7 +537,7 @@ CONTAINS
 
       subroutine sorgam_vbs_mixactivate (                        &
            id, ktau, dtstep, config_flags, idrydep_onoff,    &
-           rho_phy, t_phy, w, cldfra, cldfra_old,            &
+           rho_phy, t_phy, p_phy, w, cldfra, rh_ml, rqvblten,rqvshten,rqvcuten,cldfra_old,            &
            ddvel, z, dz8w, p_at_w, t_at_w, exch_h,           &
            qv, qc, qi, qndrop3d, f_qc, f_qi, chem,&
            fn11,fn12,fn13,fn14,fn21,fn22,fn23,fn24,&
@@ -580,11 +580,11 @@ CONTAINS
 
         real, intent(in),   &
                 dimension( ims:ime, kms:kme, jms:jme ) :: &
-                rho_phy, t_phy, w,   &
+                rho_phy, t_phy, p_phy, w,   &
                 z, dz8w, p_at_w, t_at_w, exch_h
 
         real, intent(inout),   &
-                dimension( ims:ime, kms:kme, jms:jme ) :: cldfra, cldfra_old
+                dimension( ims:ime, kms:kme, jms:jme ) :: cldfra, rh_ml, rqvblten,rqvshten,rqvcuten,cldfra_old
 
         real, intent(in),   &
                 dimension( its:ite, jts:jte, num_chem ) :: ddvel
@@ -650,7 +650,7 @@ CONTAINS
 ! 06-nov-2005 rce - id & ktau added to arg list
       call mixactivate(  msectional, &
            chem, num_chem, qv, qc, qi, qndrop3d,   &
-           t_phy, w, ddvel, idrydep_onoff,  &
+           t_phy, p_phy, w, ddvel, idrydep_onoff,  &
            maxd_acomp, maxd_asize, maxd_atype, maxd_aphase,   &
            ncomp_aer, nsize_aer, ntype_aer, nphase_aer,  &
            numptr_aer, massptr_aer, dlo_sect, dhi_sect, sigmag_aer, dcen_sect,  &
@@ -660,7 +660,7 @@ CONTAINS
            ims,ime, jms,jme, kms,kme,                            &
            its,ite, jts,jte, kts,kte,                            &
            rho_phy, z, dz8w, p_at_w, t_at_w, exch_h,      &
-           cldfra, cldfra_old, qsrflx,&
+           cldfra, rh_ml, rqvblten,rqvshten,rqvcuten, cldfra_old, qsrflx,&
            fn11,fn12,fn13,fn14,fn21,fn22,fn23,fn24,&
            fn31,fn32,fn33,fn34,fn41,fn42,fn43,fn44,&
            na11,na12,na13,na14,na21,na22,na23,na24,&
