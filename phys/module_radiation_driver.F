@@ -2235,10 +2235,10 @@ CONTAINS
               ,kms=kms,kmax=kme                       &
               ,its=its,ite=ite,jts=jts,jte=jte        &
               ,kts=kts,kte=kte                        &
-	      ,uswtop=RSWTOA,ulwtop=RLWTOA            &
-	      ,NETSWBOT=GSW,DLWBOT=GLW                &
-	      ,DSWBOT=SWDOWN,deltat=RTHRATEN          &
-	      ,dtshort=RTHRATENSW,dtlongwv=RTHRATENLW &
+        ,uswtop=RSWTOA,ulwtop=RLWTOA            &
+        ,NETSWBOT=GSW,DLWBOT=GLW                &
+        ,DSWBOT=SWDOWN,deltat=RTHRATEN          &
+        ,dtshort=RTHRATENSW,dtlongwv=RTHRATENLW &
               ,SWDDIR=swddir,SWDDIF=swddif,SWDDNI=swddni &
               )
 
@@ -3948,7 +3948,8 @@ CONTAINS
 
       QVS_WEIGHT = (1-weight)*QVSW + weight*QVSI
       RHUM=QV(i,k,j)/QVS_WEIGHT   !--- Relative humidity
-      RH_ML(i,k,j)=RHUM
+      !RH_ML(i,k,j)=RHUM
+      RH_ML(i,k,j)=QV(i,k,j)/QVSW
 !
 !--- Determine cloud fraction (modified from original algorithm)
 !
