@@ -22,7 +22,7 @@ CONTAINS
       subroutine prescribe_aerosol_mixactivate (                      &
         grid_id, ktau, dtstep, naer,                          &
         ccn_conc, chem_opt,                                   & ! RAS
-        rho_phy, th_phy, pi_phy, w, cldfra, cldfra_old,       &
+        rho_phy, th_phy, pre, pi_phy, w, cldfra, rh_ml, rqvblten,rqvshten,rqvcuten, cldfra_old,       &
         z, dz8w, p_at_w, t_at_w, exch_h,                      &
         qv, qc, qi, qndrop3d,                                &
         nsource,                                              &
@@ -51,11 +51,11 @@ CONTAINS
 
     real, intent(in),   &
         dimension( ims:ime, kms:kme, jms:jme ) :: &
-        rho_phy, th_phy, pi_phy, w,  &
+        rho_phy, th_phy, pre, pi_phy, w,  &
         z, dz8w, p_at_w, t_at_w, exch_h
 
     real, intent(inout),   &
-        dimension( ims:ime, kms:kme, jms:jme ) :: cldfra, cldfra_old
+        dimension( ims:ime, kms:kme, jms:jme ) :: cldfra, rh_ml, rqvblten,rqvshten,rqvcuten, cldfra_old
 
     real, intent(in),   &
         dimension( ims:ime, kms:kme, jms:jme ) :: &
@@ -219,7 +219,7 @@ CONTAINS
 ! 06-nov-2005 rce - grid_id & ktau added to arg list
       call mixactivate(  msectional,     &
             chem,max_chem,qv,qc,qi,qndrop3d,        &
-            t_phy, w, ddvel, idrydep_onoff,  &
+            t_phy, pre, w, ddvel, idrydep_onoff,  &
             maxd_acomp, maxd_asize, maxd_atype, maxd_aphase,   &
             ncomp_aer, nsize_aer, ntype_aer, nphase_aer,  &
             numptr_aer, massptr_aer, dlo_sect, dhi_sect, sigmag_aer, dpvolmean_aer,  &
@@ -229,7 +229,7 @@ CONTAINS
             ims,ime, jms,jme, kms,kme,                            &
             its,ite, jts,jte, kts,kte,                            &
             rho_phy, z, dz8w, p_at_w, t_at_w, exch_h,      &
-            cldfra, cldfra_old, qsrflx,&
+            cldfra, rh_ml, rqvblten,rqvshten,rqvcuten, cldfra_old, qsrflx,&
             fn11,fn12,fn13,fn14,fn21,fn22,fn23,fn24,&
            fn31,fn32,fn33,fn34,fn41,fn42,fn43,fn44,&
            na11,na12,na13,na14,na21,na22,na23,na24,&
@@ -264,7 +264,7 @@ CONTAINS
 ! 25-apr-2006 rce - dens_aer is (g/cm3), NOT (kg/m3)
 subroutine mixactivate(  msectional,            &
            chem, num_chem, qv, qc, qi, qndrop3d,         &
-           temp, w, ddvel, idrydep_onoff,  &
+           temp, pressure, w, ddvel, idrydep_onoff,  &
            maxd_acomp, maxd_asize, maxd_atype, maxd_aphase,   &
            ncomp_aer, nsize_aer, ntype_aer, nphase_aer,  &
            numptr_aer, massptr_aer, dlo_sect, dhi_sect, sigmag_aer, dpvolmean_aer,  &
@@ -274,7 +274,7 @@ subroutine mixactivate(  msectional,            &
            ims,ime, jms,jme, kms,kme,                            &
            its,ite, jts,jte, kts,kte,                            &
            rho, zm, dz8w, p_at_w, t_at_w, kvh,      &
-           cldfra, cldfra_old, qsrflx,&
+           cldfra, rh_ml, rqvblten,rqvshten,rqvcuten,cldfra_old, qsrflx,&
            fn11,fn12,fn13,fn14,fn21,fn22,fn23,fn24,&
            fn31,fn32,fn33,fn34,fn41,fn42,fn43,fn44,&
            na11,na12,na13,na14,na21,na22,na23,na24,&
@@ -345,6 +345,7 @@ subroutine mixactivate(  msectional,            &
 
   real, intent(in) :: dtstep             ! time step for microphysics (s)
   real, intent(in) :: temp(ims:ime, kms:kme, jms:jme)    ! temperature (K)
+  real, intent(in) :: pressure(ims:ime, kms:kme, jms:jme) ! pressure (Pa)
   real, intent(in) :: w(ims:ime, kms:kme, jms:jme)   ! vertical velocity (m/s)
   real, intent(in) :: rho(ims:ime, kms:kme, jms:jme)    ! density at mid-level  (kg/m3)
   REAL, intent(in) :: ddvel( its:ite, jts:jte, num_chem ) ! deposition velocity  (m/s)
@@ -355,6 +356,10 @@ subroutine mixactivate(  msectional,            &
   real, intent(in) :: kvh(ims:ime, kms:kme, jms:jme)    ! vertical diffusivity (m2/s)
   real, intent(inout) :: cldfra_old(ims:ime, kms:kme, jms:jme)! cloud fraction on previous time step
   real, intent(inout) :: cldfra(ims:ime, kms:kme, jms:jme)    ! cloud fraction
+  real, intent(inout) :: rh_ml(ims:ime, kms:kme, jms:jme)
+  real, intent(inout) :: rqvblten(ims:ime, kms:kme, jms:jme)
+  real, intent(inout) :: rqvshten(ims:ime, kms:kme, jms:jme)
+  real, intent(inout) :: rqvcuten(ims:ime, kms:kme, jms:jme)
   real, intent(in) :: hygro( its:ite, kts:kte, jts:jte, maxd_asize, maxd_atype ) ! bulk hygroscopicity   &
 
   REAL, intent(out), DIMENSION( ims:ime, jms:jme, num_chem ) ::   qsrflx ! dry deposition rate for aerosol
@@ -402,7 +407,7 @@ subroutine mixactivate(  msectional,            &
   real :: srcn(kms:kme)        ! droplet source rate (/s)
   real, parameter :: sq2pi = 2.5066282746
   real dtinv
-
+  character(len=256) :: msg 
   integer km1,kp1
   real wbar,wmix,wmin,wmax
   real dum
@@ -444,6 +449,7 @@ subroutine mixactivate(  msectional,            &
   real ::   source(kms:kme) !
 
   real ::   fn(maxd_asize, maxd_atype)         ! activation fraction for aerosol number
+  real ::   fn_ARG(maxd_asize, maxd_atype)         ! activation fraction for aerosol number by ARG
   real ::   fs(maxd_asize, maxd_atype)         ! activation fraction for aerosol sfcarea
   real ::   fm(maxd_asize, maxd_atype)         ! activation fraction for aerosol mass
   integer ::   ncomp(maxd_atype)
@@ -738,15 +744,19 @@ GROW_SHRINK_MAIN_K_LOOP: do k=kts,kte
         endif
 
         if ((tmpc1 > 0.001) .or. (tmpc2 > 0.001)) then
-
-!                wmix=wtke(k)
+         
+         WRITE(msg,*) 'call activate_ml 2, lcldfra(k)=', k,lcldfra(k), ' lcldfra_old(k) = ', lcldfra_old(k)
+         CALL wrf_debug(15, TRIM(msg))
+         
+!          wmix=wtke(k)
            wbar=w(i,k,j)+wtke(k)
            wmix=0.
            wmin=0.
 ! 06-nov-2005 rce - increase wmax from 10 to 50 (deep convective clouds)
            wmax=50.
            wdiab=0
-
+         WRITE(msg,*) 'call activate_ml 2, wbar=', wbar, ' wtke(k) = ', wtke(k)  
+         CALL wrf_debug(15, TRIM(msg))
 !                load aerosol properties, assuming external mixtures
            do n=1,ntype_aer
               do m=1,nsize_aer(n)
@@ -767,11 +777,14 @@ GROW_SHRINK_MAIN_K_LOOP: do k=kts,kte
            enddo
 
 ! 06-nov-2005 rce - grid_id & ktau added to arg list
-           call activate_ml(wbar,wmix,wdiab,wmin,wmax,temp(i,k,j),cs(k), qv(i,k,j), &
-                msectional, maxd_atype, ntype_aer, maxd_asize, nsize_aer,    &
+         WRITE(msg,*) 'rqvblten =', rqvblten(i,k,j), ' rqvshten = ', rqvshten(i,k,j) , ' rqvcuten = ', rqvcuten(i,k,j)  
+         CALL wrf_debug(15, TRIM(msg))
+           wmix=0.
+           call activate_ml(wbar,wmix,wdiab,wmin,wmax,temp(i,k,j),pressure(i,j,k),cs(k), qv(i,k,j), qc(i,k,j),qi(i,k,j), rh_ml(i,k,j), &
+                rqvblten(i,k,j),rqvshten(i,k,j),rqvcuten(i,k,j),msectional, maxd_atype, ntype_aer, maxd_asize, nsize_aer,    &
                 naerosol, vaerosol,  &
                 dlo_sect,dhi_sect,sigmag_aer,hygro_aer,              &
-                fn,fs,fm,fluxn,fluxs,fluxm,flux_fullact(k), grid_id, ktau, i, j, k )
+                fn,fn_ARG,fs,fm,fluxn,fluxs,fluxm,flux_fullact(k), grid_id, ktau, i, j, k )
            do n = 1,ntype_aer
               do m = 1,nsize_aer(n)
                 if ((abs(m - 1.0) < eps) .and. (abs(n - 1.0) < eps)) then
@@ -793,7 +806,7 @@ GROW_SHRINK_MAIN_K_LOOP: do k=kts,kte
                         hg12(i,k,j)=hygro_aer(m,n)
                 endif
                 if ((abs(m - 1.0) < eps) .and. (abs(n - 3.0) < eps)) then
-                        fn13(i,k,j)=fn(m,n)
+                        fn13(i,k,j)=fn_ARG(1,1)
                         na13(i,k,j)=naerosol(m,n)
                         vo13(i,k,j)=vaerosol(m,n)
                         dl13(i,k,j)=dlo_sect(m,n)
@@ -802,7 +815,7 @@ GROW_SHRINK_MAIN_K_LOOP: do k=kts,kte
                         hg13(i,k,j)=hygro_aer(m,n)
                 endif
                 if ((abs(m - 1.0) < eps) .and. (abs(n - 4.0) < eps)) then
-                        fn14(i,k,j)=fn(m,n)
+                        fn14(i,k,j)=fn_ARG(1,2)
                         na14(i,k,j)=naerosol(m,n)
                         vo14(i,k,j)=vaerosol(m,n)
                         dl14(i,k,j)=dlo_sect(m,n)
@@ -829,7 +842,7 @@ GROW_SHRINK_MAIN_K_LOOP: do k=kts,kte
                         hg22(i,k,j)=hygro_aer(m,n)
                 endif
                 if ((abs(m - 2.0) < eps) .and. (abs(n - 3.0) < eps)) then
-                        fn23(i,k,j)=fn(m,n)
+                        fn23(i,k,j)=fn_ARG(2,1)
                         na23(i,k,j)=naerosol(m,n)
                         vo23(i,k,j)=vaerosol(m,n)
                         dl23(i,k,j)=dlo_sect(m,n)
@@ -838,7 +851,7 @@ GROW_SHRINK_MAIN_K_LOOP: do k=kts,kte
                         hg23(i,k,j)=hygro_aer(m,n)
                 endif
                 if ((abs(m - 2.0) < eps) .and. (abs(n - 4.0) < eps)) then
-                        fn24(i,k,j)=fn(m,n)
+                        fn24(i,k,j)=fn_ARG(2,2)
                         na24(i,k,j)=naerosol(m,n)
                         vo24(i,k,j)=vaerosol(m,n)
                         dl24(i,k,j)=dlo_sect(m,n)
@@ -1046,13 +1059,18 @@ OLD_CLOUD_MAIN_K_LOOP: do k=kts,kte
 
                     enddo
                  enddo
+                 wmix=0.
 !          print *,'old cloud wbar,wmix=',wbar,wmix
+                  WRITE(msg,*) 'call activate_ml 1, wbar=', wbar, ' wmix = ', wmix
+                  CALL wrf_debug(15, TRIM(msg))
+                  WRITE(msg,*) 'call activate_ml 1, lcldfra(k)=', k,lcldfra(k), ' lcldfra(km1) = ', km1,lcldfra(km1)
+                  CALL wrf_debug(15, TRIM(msg))
 
-                 call activate_ml(wbar,wmix,wdiab,wmin,wmax,temp(i,k,j),cs(k), qv(i,k,j),&
-                      msectional, maxd_atype, ntype_aer, maxd_asize, nsize_aer,    &
+                 call activate_ml(wbar,wmix,wdiab,wmin,wmax,temp(i,k,j),pressure(i,j,k),cs(k), qv(i,k,j), qc(i,k,j),qi(i,k,j), rh_ml(i,k,j),&
+                      rqvblten(i,k,j),rqvshten(i,k,j),rqvcuten(i,k,j),msectional, maxd_atype, ntype_aer, maxd_asize, nsize_aer,    &
                       naerosol, vaerosol,  &
                       dlo_sect,dhi_sect, sigmag_aer,hygro_aer,                    &
-                      fn,fs,fm,fluxn,fluxs,fluxm,flux_fullact(k), grid_id, ktau, i, j, k )
+                      fn,fn_ARG,fs,fm,fluxn,fluxs,fluxm,flux_fullact(k), grid_id, ktau, i, j, k )
                   do n=1,ntype_aer
                         do m=1,nsize_aer(n)
                               if ((abs(m - 1.0) < eps) .and. (abs(n - 1.0) < eps)) then
@@ -1074,7 +1092,7 @@ OLD_CLOUD_MAIN_K_LOOP: do k=kts,kte
                                        hg12(i,k,j)=hygro_aer(m,n)
                               endif
                               if ((abs(m - 1.0) < eps) .and. (abs(n - 3.0) < eps)) then
-                                       fn13(i,k,j)=fn(m,n)
+                                       fn13(i,k,j)=fn_ARG(1,1)
                                        na13(i,k,j)=naerosol(m,n)
                                        vo13(i,k,j)=vaerosol(m,n)
                                        dl13(i,k,j)=dlo_sect(m,n)
@@ -1083,7 +1101,7 @@ OLD_CLOUD_MAIN_K_LOOP: do k=kts,kte
                                        hg13(i,k,j)=hygro_aer(m,n)
                               endif
                               if ((abs(m - 1.0) < eps) .and. (abs(n - 4.0) < eps)) then
-                                       fn14(i,k,j)=fn(m,n)
+                                       fn14(i,k,j)=fn_ARG(1,2)
                                        na14(i,k,j)=naerosol(m,n)
                                        vo14(i,k,j)=vaerosol(m,n)
                                        dl14(i,k,j)=dlo_sect(m,n)
@@ -1110,7 +1128,7 @@ OLD_CLOUD_MAIN_K_LOOP: do k=kts,kte
                                        hg22(i,k,j)=hygro_aer(m,n)
                               endif
                               if ((abs(m - 2.0) < eps) .and. (abs(n - 3.0) < eps)) then
-                                       fn23(i,k,j)=fn(m,n)
+                                       fn23(i,k,j)=fn_ARG(2,1)
                                        na23(i,k,j)=naerosol(m,n)
                                        vo23(i,k,j)=vaerosol(m,n)
                                        dl23(i,k,j)=dlo_sect(m,n)
@@ -1119,7 +1137,7 @@ OLD_CLOUD_MAIN_K_LOOP: do k=kts,kte
                                        hg23(i,k,j)=hygro_aer(m,n)
                               endif
                               if ((abs(m - 2.0) < eps) .and. (abs(n - 4.0) < eps)) then
-                                       fn24(i,k,j)=fn(m,n)
+                                       fn24(i,k,j)=fn_ARG(2,2)
                                        na24(i,k,j)=naerosol(m,n)
                                        vo24(i,k,j)=vaerosol(m,n)
                                        dl24(i,k,j)=dlo_sect(m,n)
@@ -1768,7 +1786,7 @@ OLD_CLOUD_NSUBMIX_LOOP: do nsub=1,nsubmix
 !      2. Multiple aerosol types. J. Geophys. Res., 105, 6837-6844.
 
       USE module_model_constants, only: g,rhowater, xlv, cp, rvovrd, r_d, r_v, &
-              mwdry,svp1,svp2,svp3,ep_2
+              mwdry,ep_2
 
       implicit none
 
@@ -1835,6 +1853,11 @@ OLD_CLOUD_NSUBMIX_LOOP: do nsub=1,nsubmix
       real diff0,conduct0
       real es ! saturation vapor pressure
       real qs ! water vapor saturation mixing ratio
+      real esw, esi ! saturation vapor pressure over water and ice
+      real qvsw, qvsi ! saturation mixing ratio over water and ice
+      real qvs_weight ! weighted saturation mixing ratio
+      real tc ! temperature in Celsius
+      real weight_ice ! ice/water weight for saturation calculation
       real dqsdt ! change in qs with temperature
       real dqsdp ! change in qs with pressure
       real gg ! thermodynamic function (m2/s)
@@ -1896,7 +1919,14 @@ OLD_CLOUD_NSUBMIX_LOOP: do nsub=1,nsubmix
       real, parameter :: sq2  = 1.4142135624
       real, parameter :: sqpi = 1.7724538509
       real, parameter :: pi   = 3.1415926536
-
+!     Constants for ice saturation (matching module_radiation_driver.F)
+      real, parameter :: SVP1_rad  = 0.61078
+      real, parameter :: SVP2_rad  = 17.2693882    ! for water
+      real, parameter :: SVPI2_rad = 21.8745584    ! for ice
+      real, parameter :: SVP3_rad  = 35.86         ! for water
+      real, parameter :: SVPI3_rad = 7.66          ! for ice
+      real, parameter :: SVPT0_rad = 273.15
+      real, parameter :: QCLDMIN_rad = 1.E-12
 !      integer, save :: ndist(nx)  ! accumulates frequency distribution of integration bins required
 !      data ndist/nx*0/
 
@@ -1992,8 +2022,26 @@ OLD_CLOUD_NSUBMIX_LOOP: do nsub=1,nsubmix
       pres=r_d*rhoair*tair
       diff0=0.211e-4*(p0/pres)*(tair/t0)**1.94
       conduct0=(5.69+0.017*(tair-t0))*4.186e2*1.e-5 ! convert to J/m/s/deg
-      es=1000.*svp1*exp( svp2*(tair-t0)/(tair-svp3) )
-      qs=ep_2*es/(pres-es)
+      !     Calculate saturation vapor pressure and mixing ratio using ice/water weighting
+!     (matching module_radiation_driver.F approach)
+      tc = tair - SVPT0_rad
+      esw = 1000.0 * SVP1_rad * exp( SVP2_rad * tc / ( tair - SVP3_rad ) )
+      esi = 1000.0 * SVP1_rad * exp( SVPI2_rad * tc / ( tair - SVPI3_rad ) )
+      qvsw = ep_2 * esw / ( pres - esw )
+      qvsi = ep_2 * esi / ( pres - esi )
+!     Temperature-based weight: pure liquid above 273.15K, pure ice below 253.15K
+      if (tair .gt. SVPT0_rad) then
+         weight_ice = 0.0
+      else if (tair .lt. SVPT0_rad - 20.0) then
+         weight_ice = 1.0
+      else
+         weight_ice = (SVPT0_rad - tair) / 20.0
+      endif
+      qvs_weight = (1.0 - weight_ice) * qvsw + weight_ice * qvsi
+!     Use weighted saturation for activation calculations
+      es = (1.0 - weight_ice) * esw + weight_ice * esi
+      qs = qvs_weight
+      
       dqsdt=xlv/(r_v*tair*tair)*qs
       alpha=g*(xlv/(cp*r_v*tair*tair)-1./(r_d*tair))
       gamma=(1+xlv/cp*dqsdt)/(rhoair*qs)
@@ -2947,10 +2995,10 @@ OLD_CLOUD_NSUBMIX_LOOP: do nsub=1,nsubmix
 
 !----------------------------------------------------------------------
 ! 06-nov-2005 rce - grid_id & ktau added to arg list
-      subroutine activate_ml(wbar, sigw, wdiab, wminf, wmaxf, tair, rhoair, qv, &
-                      msectional, maxd_atype, ntype_aer, maxd_asize, nsize_aer,    &
+      subroutine activate_ml(wbar, sigw, wdiab, wminf, wmaxf, tair, pressure, rhoair, qv, qc, qi, rh_ml, &
+                      qvblten,qvshten,qvcuten,msectional, maxd_atype, ntype_aer, maxd_asize, nsize_aer,    &
                       na, volc, dlo_sect,dhi_sect,sigman, hygro, &
-                      fn, fs, fm, fluxn, fluxs, fluxm, flux_fullact, &
+                      fn, fn_ARG, fs, fm, fluxn, fluxs, fluxm, flux_fullact, &
                       grid_id, ktau, ii, jj, kk,smax_prescribed )!BSINGH - Added smax_prescribed for WRFCuP
 
 !      calculates number, surface, and mass fraction of aerosols activated as CCN
@@ -2965,7 +3013,7 @@ OLD_CLOUD_NSUBMIX_LOOP: do nsub=1,nsubmix
 !      2. Multiple aerosol types. J. Geophys. Res., 105, 6837-6844.
       use module_wrf_error , only : wrf_err_message
       USE module_model_constants, only: g,rhowater, xlv, cp, rvovrd, r_d, r_v, &
-              mwdry,svp1,svp2,svp3,ep_2
+              mwdry,ep_2
 
       ! Liran add ML start ====================================
       use, intrinsic :: iso_c_binding
@@ -2996,8 +3044,12 @@ OLD_CLOUD_NSUBMIX_LOOP: do nsub=1,nsubmix
       real,intent(in) :: wminf         ! minimum updraft velocity for integration (m/s)
       real,intent(in) :: wmaxf         ! maximum updraft velocity for integration (m/s)
       real,intent(in) :: tair          ! air temperature (K)
+      real,intent(in) :: pressure
       real,intent(in) :: rhoair        ! air density (kg/m3)
       real,intent(in) :: qv            ! water vapor mixing ratio (g/g)
+      real,intent(in) :: qc 
+      real,intent(in) :: qi 
+      real,intent(in) :: rh_ml,qvblten,qvshten,qvcuten
       real,intent(in) :: na(maxd_asize,maxd_atype)     ! aerosol number concentration (/m3)
       real,intent(in) :: sigman(maxd_asize,maxd_atype) ! geometric standard deviation of aerosol size distribution
       real,intent(in) :: hygro(maxd_asize,maxd_atype)  ! bulk hygroscopicity of aerosol mode
@@ -3009,6 +3061,7 @@ OLD_CLOUD_NSUBMIX_LOOP: do nsub=1,nsubmix
 !      output
 
       real,intent(inout) :: fn(maxd_asize,maxd_atype)    ! number fraction of aerosols activated
+      real,intent(inout) :: fn_ARG(maxd_asize,maxd_atype) ! number fraction of aerosols activated based on default ARG
       real,intent(inout) :: fs(maxd_asize,maxd_atype)    ! surface fraction of aerosols activated
       real,intent(inout) :: fm(maxd_asize,maxd_atype)    ! mass fraction of aerosols activated
       real,intent(inout) :: fluxn(maxd_asize,maxd_atype) ! flux of activated aerosol number fraction into cloud (m/s)
@@ -3043,6 +3096,11 @@ OLD_CLOUD_NSUBMIX_LOOP: do nsub=1,nsubmix
       real diff0,conduct0
       real es ! saturation vapor pressure
       real qs ! water vapor saturation mixing ratio
+      real esw, esi ! saturation vapor pressure over water and ice
+      real qvsw, qvsi ! saturation mixing ratio over water and ice
+      real qvs_weight ! weighted saturation mixing ratio
+      real tc ! temperature in Celsius
+      real weight_ice ! ice/water weight for saturation calculation
       real dqsdt ! change in qs with temperature
       real dqsdp ! change in qs with pressure
       real gg ! thermodynamic function (m2/s)
@@ -3097,6 +3155,14 @@ OLD_CLOUD_NSUBMIX_LOOP: do nsub=1,nsubmix
       real, parameter :: eps = 0.3
       real, parameter :: fmax = 0.99
       real, parameter :: sds = 3.
+      ! Liran add start ====================================
+      real, parameter :: pq0=379.90516
+      real, parameter :: a2=17.2693882
+      real, parameter :: a3=273.16
+      real, parameter :: a4=35.86
+      real, parameter :: rhmin=1.
+      real :: q
+      ! Liran add end ====================================
 
       ! Liran add ML start ====================================
       ! Kinds for FTorch interop
@@ -3131,6 +3197,14 @@ OLD_CLOUD_NSUBMIX_LOOP: do nsub=1,nsubmix
       real, parameter :: sq2  = 1.4142135624
       real, parameter :: sqpi = 1.7724538509
       real, parameter :: pi   = 3.1415926536
+!     Constants for ice saturation (matching module_radiation_driver.F)
+      real, parameter :: SVP1_rad  = 0.61078
+      real, parameter :: SVP2_rad  = 17.2693882    ! for water
+      real, parameter :: SVPI2_rad = 21.8745584    ! for ice
+      real, parameter :: SVP3_rad  = 35.86         ! for water
+      real, parameter :: SVPI3_rad = 7.66          ! for ice
+      real, parameter :: SVPT0_rad = 273.15
+      real, parameter :: QCLDMIN_rad = 1.E-12
 
 !      integer, save :: ndist(nx)  ! accumulates frequency distribution of integration bins required
 !      data ndist/nx*0/
@@ -3227,8 +3301,34 @@ OLD_CLOUD_NSUBMIX_LOOP: do nsub=1,nsubmix
       pres=r_d*rhoair*tair
       diff0=0.211e-4*(p0/pres)*(tair/t0)**1.94
       conduct0=(5.69+0.017*(tair-t0))*4.186e2*1.e-5 ! convert to J/m/s/deg
-      es=1000.*svp1*exp( svp2*(tair-t0)/(tair-svp3) )
-      qs=ep_2*es/(pres-es)
+      !     Calculate saturation vapor pressure and mixing ratio using ice/water weighting
+!     (matching module_radiation_driver.F approach)
+      tc = tair - SVPT0_rad
+      esw = 1000.0 * SVP1_rad * exp( SVP2_rad * tc / ( tair - SVP3_rad ) )
+      esi = 1000.0 * SVP1_rad * exp( SVPI2_rad * tc / ( tair - SVPI3_rad ) )
+      qvsw = ep_2 * esw / ( pres - esw )
+      qvsi = ep_2 * esi / ( pres - esi )
+      weight_ice = qi/(qc+qi)
+      qvs_weight = (1.0 - weight_ice) * qvsw + weight_ice * qvsi
+!     Use weighted saturation for activation calculations
+      es = (1.0 - weight_ice) * esw + weight_ice * esi
+      qs = qvs_weight
+      WRITE( msg,* ) 'qs: ', qs
+      CALL wrf_debug ( 15 , TRIM(msg) )
+      WRITE( msg,* ) 'qv/qs000: ', qv/qs
+      CALL wrf_debug ( 15 , TRIM(msg) )
+      WRITE( msg,* ) 'qi: ', qi
+      CALL wrf_debug ( 15 , TRIM(msg) )
+      WRITE( msg,* ) 'qc: ', qc
+      CALL wrf_debug ( 15 , TRIM(msg) )
+      WRITE( msg,* ) 'rh_ml: ', rh_ml
+      CALL wrf_debug ( 15 , TRIM(msg) )
+      WRITE( msg,* ) 'qvblten: ', qvblten
+      CALL wrf_debug ( 15 , TRIM(msg) )
+      WRITE( msg,* ) 'qvshten: ', qvshten
+      CALL wrf_debug ( 15 , TRIM(msg) )
+      WRITE( msg,* ) 'qvcuten: ', qvcuten
+      CALL wrf_debug ( 15 , TRIM(msg) )
       dqsdt=xlv/(r_v*tair*tair)*qs
       alpha=g*(xlv/(cp*r_v*tair*tair)-1./(r_d*tair))
       gamma=(1+xlv/cp*dqsdt)/(rhoair*qs)
@@ -3568,7 +3668,8 @@ OLD_CLOUD_NSUBMIX_LOOP: do nsub=1,nsubmix
 
          do 47000 nw = 1, nwmax
 41000       wnuc=w+wdiab
-
+            WRITE( msg,* ) 'integrate w wnuc: ', wnuc
+            CALL wrf_debug ( 15 , TRIM(msg) )
             if (idiagaa.gt.0) write(*,94720) nw, w, wold, dw
 
 !           write(6,*)'wnuc=',wnuc
@@ -4191,17 +4292,23 @@ output_array = 0.0_real32
          idx = 1
          input_array(1,idx) = tair;              idx = idx + 1
          input_array(1,idx) = pres/100;          idx = idx + 1
-         input_array(1,idx) = qv/qs*100;         idx = idx + 1
+         q = qv/(1.0+qv)
+         input_array(1,idx) = rh_ml*100;         idx = idx + 1
          input_array(1,idx) = wbar*100;          idx = idx + 1
          do n=1,2; do m=1,2; input_array(1,idx) = na(m,n)*1e-6;    idx = idx + 1; end do; end do
          do n=1,2; do m=1,2
             if (na(m,n) > 0.0) then
-               !input_array(1,idx) = real( ((volc(m,n)/(ccc*na(m,n)))**third)*1e6, kind=real32 )
                input_array(1,idx) = real(exp(-1.5*alnsign(m,n)*alnsign(m,n))* (3.*volc(m,n)/(4.*pi*na(m,n)))**third*1e6, kind=real32 )
             else
                input_array(1,idx) = 0.0_real32
             end if
             idx = idx + 1
+         end do; end do
+         do n=1,2; do m=1,2
+            WRITE( msg,* ) 'dlo_sect(m,n)= ', dlo_sect(m,n)
+            CALL wrf_debug ( 15 , TRIM(msg) )
+            WRITE( msg,* ) 'dhi_sect(m,n)= ', dhi_sect(m,n)
+            CALL wrf_debug ( 15 , TRIM(msg) )
          end do; end do
 
          do n=1,2; do m=1,2; input_array(1,idx) = hygro(m,n); idx = idx + 1; end do; end do
@@ -4231,10 +4338,15 @@ output_array = 0.0_real32
          CALL wrf_debug ( 15 , TRIM(msg) )
          WRITE( msg,* ) 'pres: ', pres
          CALL wrf_debug ( 15 , TRIM(msg) )
+         WRITE( msg,* ) 'pressure: ', pressure
+         CALL wrf_debug ( 15 , TRIM(msg) )
          WRITE( msg,* ) 'qv/qs: ', qv/qs
          CALL wrf_debug ( 15 , TRIM(msg) )
          WRITE( msg,* ) 'wbar: ', wbar
          CALL wrf_debug ( 15 , TRIM(msg) )
+
+         WRITE(msg,*) 'sigw=', sigw
+         CALL wrf_debug(15, TRIM(msg))
 
          dev_idx   = int(0, kind=c_int)
          ! Input/Output tensor from host buffer (CPU) 
@@ -4249,35 +4361,35 @@ output_array = 0.0_real32
          ! e.g., a couple of input features
          WRITE(msg,*) 'input_array(1,1)=tair (K)=', input_array(1,1)
          CALL wrf_debug(15, TRIM(msg))
-         WRITE(msg,*) 'input_array(2,1)=pres (hPa)=', input_array(2,1)
+         WRITE(msg,*) 'input_array(2,1)=pressure (hPa)=', input_array(2,1)
          CALL wrf_debug(15, TRIM(msg))
          WRITE(msg,*) 'input_array(3,1)=RH (%)=', input_array(3,1)
          CALL wrf_debug(15, TRIM(msg))
          WRITE(msg,*) 'input_array(4,1)=wbar (cm/s)=', input_array(4,1)
          CALL wrf_debug(15, TRIM(msg))
-         WRITE(msg,*) 'input_array(5,1)=na (#/cm3)', input_array(5,1)
+         WRITE(msg,*) 'input_array(5,1)=na (#/cm3)=', input_array(5,1)
          CALL wrf_debug(15, TRIM(msg))
-         WRITE(msg,*) 'input_array(6,1)=na (#/cm3)', input_array(6,1)
+         WRITE(msg,*) 'input_array(6,1)=na (#/cm3)=', input_array(6,1)
          CALL wrf_debug(15, TRIM(msg))
-         WRITE(msg,*) 'input_array(7,1)=na (#/cm3)', input_array(7,1)
+         WRITE(msg,*) 'input_array(7,1)=na (#/cm3)=', input_array(7,1)
          CALL wrf_debug(15, TRIM(msg))
-         WRITE(msg,*) 'input_array(8,1)=na (#/cm3)', input_array(8,1)
+         WRITE(msg,*) 'input_array(8,1)=na (#/cm3)=', input_array(8,1)
          CALL wrf_debug(15, TRIM(msg))
-         WRITE(msg,*) 'input_array(9,1)=rmean (um)', input_array(9,1)
+         WRITE(msg,*) 'input_array(9,1)=rmean (um)=', input_array(9,1)
          CALL wrf_debug(15, TRIM(msg))
-         WRITE(msg,*) 'input_array(10,1)=rmean (um)', input_array(10,1)
+         WRITE(msg,*) 'input_array(10,1)=rmean (um)=', input_array(10,1)
          CALL wrf_debug(15, TRIM(msg))
-         WRITE(msg,*) 'input_array(11,1)=rmean (um)', input_array(11,1)
+         WRITE(msg,*) 'input_array(11,1)=rmean (um)=', input_array(11,1)
          CALL wrf_debug(15, TRIM(msg))
-         WRITE(msg,*) 'input_array(12,1)=rmean (um)', input_array(12,1)
+         WRITE(msg,*) 'input_array(12,1)=rmean (um)=', input_array(12,1)
          CALL wrf_debug(15, TRIM(msg))
-         WRITE(msg,*) 'input_array(13,1)=hygro', input_array(13,1)
+         WRITE(msg,*) 'input_array(13,1)=hygro=', input_array(13,1)
          CALL wrf_debug(15, TRIM(msg))
-         WRITE(msg,*) 'input_array(14,1)=hygro', input_array(14,1)
+         WRITE(msg,*) 'input_array(14,1)=hygro=', input_array(14,1)
          CALL wrf_debug(15, TRIM(msg))
-         WRITE(msg,*) 'input_array(15,1)=hygro', input_array(15,1)
+         WRITE(msg,*) 'input_array(15,1)=hygro=', input_array(15,1)
          CALL wrf_debug(15, TRIM(msg))
-         WRITE(msg,*) 'input_array(16,1)=hygro', input_array(16,1)
+         WRITE(msg,*) 'input_array(16,1)=hygro=', input_array(16,1)
          CALL wrf_debug(15, TRIM(msg))
          call torch_tensor_from_array_real32_2d_default_layout( &
             tout, output_array, torch_kCPU, requires_grad=.false. )
@@ -4301,6 +4413,12 @@ output_array = 0.0_real32
          WRITE(msg,*) 'fn(2,2)=', fn(2,2)
          CALL wrf_debug(15, TRIM(msg))
 
+         do n = 1, ntype_aer
+           do m = 1, nsize_aer(n)
+               fn_ARG(m,n) = fn(m,n)
+            end do
+         end do
+
          ! ===== Map emulator outputs -> fn(m,n) in bin order (idx = 1..out_dim) =====
          idx = 1
          do n = 1, 2
@@ -4309,6 +4427,11 @@ output_array = 0.0_real32
                idx = idx + 1
             end do
          end do
+
+
+         tmp_swap = fn(1,1)
+         fn(1,1) = fn(2,1)
+         fn(2,1) = tmp_swap
 
          ! ===== Recompute fs, fm consistently with the new fn =====
 
