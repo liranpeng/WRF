@@ -1,0 +1,85 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Dockerfile.prebuilt
+#
+# Packages the ALREADY-COMPILED WRF-Chem into a container image.
+# Nothing is compiled here — all binaries come from the staging directory
+# produced by  gather_runtime.sh  (run on Perlmutter before this build).
+#
+# Build context layout expected (produced by gather_runtime.sh):
+#   docker_context/
+#     wrf/
+#       main/   ← wrf.exe, real.exe, ndown.exe
+#       run/    ← all WRF data/table files
+#     ftorch_libs/   ← libftorch.so* from $HOME/opt/ftorch/lib64
+#     libtorch_libs/ ← libtorch*.so* from libtorch-cpu/lib
+#     runtime_libs/  ← all other .so deps found by ldd (NetCDF, HDF5, MPI, …)
+#
+# Build command (run on your Docker host in the directory that contains
+# both this file and the docker_context/ folder):
+#
+#   docker build \
+#     -f Dockerfile.prebuilt \
+#     -t wrf-chem-prebuilt \
+#     docker_context/
+#
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Minimal Ubuntu LTS base — provides GNU C/Fortran runtime, OpenMP, glibc.
+# Ubuntu 22.04 ships glibc 2.35, which is ≥ Perlmutter's glibc so binaries run.
+FROM ubuntu:22.04
+SHELL ["/bin/bash", "-c"]
+
+# ── Minimal runtime packages from the distro ──────────────────────────────────
+# These cover:
+#   libgomp1      — OpenMP (WRF compiled with dm+sm uses OpenMP threads)
+#   libgfortran5  — GNU Fortran runtime
+#   libstdc++6    — GNU C++ runtime (needed by LibTorch / FTorch)
+#   libopenmpi3   — OpenMPI runtime (for mpirun inside the container)
+#   openmpi-bin   — mpirun / mpiexec
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        libgomp1          \
+        libgfortran5      \
+        libstdc++6        \
+        libopenmpi3       \
+        openmpi-bin       \
+        libquadmath0      \
+    && rm -rf /var/lib/apt/lists/*
+
+# ── Fixed library paths inside the container ──────────────────────────────────
+ENV FTORCH_LIB=/opt/ftorch/lib64   \
+    LIBTORCH_LIB=/opt/libtorch/lib \
+    RUNTIME_LIBS=/opt/runtime_libs
+
+# ── Copy FTorch shared libraries ──────────────────────────────────────────────
+COPY ftorch_libs/   /opt/ftorch/lib64/
+
+# ── Copy LibTorch shared libraries ───────────────────────────────────────────
+COPY libtorch_libs/ /opt/libtorch/lib/
+
+# ── Copy all other runtime .so files gathered by ldd (NetCDF, HDF5, MPI, …) ──
+COPY runtime_libs/  /opt/runtime_libs/
+
+# ── Copy the pre-compiled WRF tree ───────────────────────────────────────────
+COPY wrf/           /container/WRF/
+
+RUN chmod -R a+rx /container/WRF/main/
+
+# ── Runtime library search path ───────────────────────────────────────────────
+# Priority: FTorch → LibTorch → bundled runtime libs → system libs
+ENV LD_LIBRARY_PATH="${FTORCH_LIB}:${LIBTORCH_LIB}:${RUNTIME_LIBS}:${LD_LIBRARY_PATH:-}"
+
+# ── Convenience environment for WRF runs ─────────────────────────────────────
+ENV WRF_DIR=/container/WRF
+ENV PATH="${WRF_DIR}/main:${PATH}"
+
+WORKDIR /container/WRF/run
+
+# ── Smoke-test: verify executables load (checks dynamic linking) ──────────────
+RUN ldd /container/WRF/main/wrf.exe  | grep -v "not found" || \
+    { echo "ERROR: missing shared libraries for wrf.exe — check runtime_libs/"; \
+      ldd /container/WRF/main/wrf.exe; exit 1; } && \
+    ldd /container/WRF/main/real.exe | grep -v "not found" || \
+    { echo "ERROR: missing shared libraries for real.exe — check runtime_libs/"; \
+      ldd /container/WRF/main/real.exe; exit 1; }
+
+CMD ["/bin/bash"]
