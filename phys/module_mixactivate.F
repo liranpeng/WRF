@@ -3022,7 +3022,7 @@ OLD_CLOUD_NSUBMIX_LOOP: do nsub=1,nsubmix
          torch_model, torch_tensor, &
          torch_model_load, torch_model_forward, &
          torch_kCPU, torch_kCUDA, &
-         torch_tensor_from_array_real32_2d_default_layout       ! generic present in your build
+         torch_tensor_from_array_real32_2d   ! FTorch v1.0.0: _default_layout suffix removed
       ! Liran add ML end ====================================
 
       implicit none
@@ -3178,8 +3178,9 @@ OLD_CLOUD_NSUBMIX_LOOP: do nsub=1,nsubmix
       integer, parameter :: in_dim  = 16
       integer, parameter :: out_dim = 4
       integer :: dev_idx
-      ! Host arrays (match real32 API; keep contiguous/target)
-      real(real32), allocatable :: input_array(:,:), output_array(:,:)
+      ! Host arrays (FTorch v1.0.0 requires target attribute for c_loc interop)
+      real(real32), allocatable, target :: input_array(:,:), output_array(:,:)
+      integer :: tensor_layout(2)   ! FTorch v1.0.0: dimension-order layout arg
       real(real32) :: tmp_swap
       ! Misc
       integer :: idx
@@ -4278,6 +4279,8 @@ if (.not. allocated(input_array))  allocate(input_array(1, in_dim))
 if (.not. allocated(output_array)) allocate(output_array(1, out_dim))
 input_array  = 0.0_real32
 output_array = 0.0_real32
+! FTorch v1.0.0: layout = [1,2] preserves Fortran (column-major) dimension order
+tensor_layout = [1, 2]
 
 ! Try to load the model 
    if (.not. model_loaded) then
@@ -4349,9 +4352,10 @@ output_array = 0.0_real32
          CALL wrf_debug(15, TRIM(msg))
 
          dev_idx   = int(0, kind=c_int)
-         ! Input/Output tensor from host buffer (CPU) 
-         call torch_tensor_from_array_real32_2d_default_layout( &
-            tin,  input_array,  torch_kCPU, requires_grad=.false. )
+         ! Input/Output tensor from host buffer (CPU)
+         ! FTorch v1.0.0: layout arg inserted between array and device_type
+         call torch_tensor_from_array_real32_2d( &
+            tin,  input_array,  tensor_layout, torch_kCPU, requires_grad=.false. )
 
          CALL wrf_debug(15,'tin finished')
          ! Forward expects arrays-of-tensors, even for single in/out
@@ -4391,8 +4395,8 @@ output_array = 0.0_real32
          CALL wrf_debug(15, TRIM(msg))
          WRITE(msg,*) 'input_array(16,1)=hygro=', input_array(16,1)
          CALL wrf_debug(15, TRIM(msg))
-         call torch_tensor_from_array_real32_2d_default_layout( &
-            tout, output_array, torch_kCPU, requires_grad=.false. )
+         call torch_tensor_from_array_real32_2d( &
+            tout, output_array, tensor_layout, torch_kCPU, requires_grad=.false. )
             CALL wrf_debug(15,'tout finished')
          out_t(1) = tout
          CALL wrf_debug(15,'tout finished2')
