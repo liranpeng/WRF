@@ -1,58 +1,55 @@
 # ─────────────────────────────────────────────────────────────────────────────
-# WRF-Chem container with FTorch + LibTorch (CPU)
+# Dockerfile
 #
-# Build:
-#   docker build -t wrf-chem-ftorch .
+# Builds a WRF-Chem container from YOUR modified source code.
+# The source is NOT re-downloaded from GitHub — it is copied from the
+# docker_context/wrf_src/ directory produced by  gather_wrf_source.sh
+# (run once on Perlmutter; the original installation is never modified).
 #
-# Override defaults at build time, e.g.:
+# Build context layout required:
+#   docker_context/
+#     wrf_src/    ← your WRF source tree (produced by gather_wrf_source.sh)
+#
+# Build command (from the directory that contains this Dockerfile
+# and the docker_context/ folder):
+#
+#   docker build -t wrf-chem-local .
+#
+# Override FTorch / LibTorch versions at build time if needed:
 #   docker build \
 #     --build-arg LIBTORCH_VERSION=2.2.0 \
 #     --build-arg FTORCH_TAG=v0.7.0      \
-#     --build-arg WRF_BRANCH=master      \
-#     -t wrf-chem-ftorch .
+#     -t wrf-chem-local .
 # ─────────────────────────────────────────────────────────────────────────────
 FROM benjaminkirk/ncar-derecho-wrf:latest
 SHELL ["/bin/bash", "-c"]
 
 # ── Build-time arguments ──────────────────────────────────────────────────────
-# LibTorch: CPU-only, cxx11-ABI build  (https://pytorch.org/get-started/locally)
 ARG LIBTORCH_VERSION=2.1.0
-# FTorch: Fortran/C++ ↔ LibTorch bridge (https://github.com/Cambridge-ICCS/FTorch)
 ARG FTORCH_TAG=v0.6.1
-# WRF source branch from github.com/liranpeng/WRF
-ARG WRF_BRANCH=master
 
-# ── Fixed install prefixes (used both at build- and run-time) ─────────────────
+# ── Fixed install paths ───────────────────────────────────────────────────────
 ENV TORCH_ROOT=/opt/libtorch \
     FTORCH_INSTALL=/opt/ftorch
 
-# ─────────────────────────────────────────────────────────────────────────────
-# 1. Make sure cmake / wget / unzip / git are available
-#    (the base image may already have some of these)
-# ─────────────────────────────────────────────────────────────────────────────
+# ── 1. Ensure cmake / wget / unzip are available ──────────────────────────────
 RUN if command -v yum &>/dev/null; then \
-        yum install -y cmake3 wget unzip git && \
+        yum install -y cmake3 wget unzip && \
         ln -sf /usr/bin/cmake3 /usr/local/bin/cmake; \
     else \
         apt-get update && \
-        apt-get install -y --no-install-recommends cmake wget unzip git && \
+        apt-get install -y --no-install-recommends cmake wget unzip && \
         rm -rf /var/lib/apt/lists/*; \
     fi
 
-# ─────────────────────────────────────────────────────────────────────────────
-# 2. Download CPU-only LibTorch (cxx11-ABI build, required by gfortran stack)
-# ─────────────────────────────────────────────────────────────────────────────
+# ── 2. Download CPU-only LibTorch ─────────────────────────────────────────────
 RUN wget -q \
       "https://download.pytorch.org/libtorch/cpu/libtorch-cxx11-abi-shared-with-deps-${LIBTORCH_VERSION}%2Bcpu.zip" \
       -O /tmp/libtorch.zip && \
     unzip -q /tmp/libtorch.zip -d /opt/ && \
-    rm /tmp/libtorch.zip && \
-    echo "LibTorch ${LIBTORCH_VERSION} installed at ${TORCH_ROOT}"
+    rm /tmp/libtorch.zip
 
-# ─────────────────────────────────────────────────────────────────────────────
-# 3. Build and install FTorch
-#    FTorch generates ftorch.mod (Fortran module) and libftorch.so
-# ─────────────────────────────────────────────────────────────────────────────
+# ── 3. Build and install FTorch ───────────────────────────────────────────────
 RUN git clone --branch ${FTORCH_TAG} --depth 1 \
         https://github.com/Cambridge-ICCS/FTorch.git /tmp/ftorch-src && \
     cmake -B /tmp/ftorch-build -S /tmp/ftorch-src \
@@ -61,91 +58,72 @@ RUN git clone --branch ${FTORCH_TAG} --depth 1 \
           -DCMAKE_BUILD_TYPE=Release && \
     cmake --build /tmp/ftorch-build -j$(nproc) && \
     cmake --install /tmp/ftorch-build && \
-    # Normalise: guarantee lib64/ exists regardless of what cmake chose
     [ -d ${FTORCH_INSTALL}/lib64 ] || ln -sf ${FTORCH_INSTALL}/lib ${FTORCH_INSTALL}/lib64 && \
-    rm -rf /tmp/ftorch-src /tmp/ftorch-build && \
-    echo "FTorch ${FTORCH_TAG} installed at ${FTORCH_INSTALL}"
+    rm -rf /tmp/ftorch-src /tmp/ftorch-build
 
-# ── Runtime paths for FTorch / LibTorch ──────────────────────────────────────
 ENV FTORCH_MOD=${FTORCH_INSTALL}/include/ftorch \
     FTORCH_LIB=${FTORCH_INSTALL}/lib64 \
     LIBTORCH_LIB=${TORCH_ROOT}/lib
 
-ENV LD_LIBRARY_PATH="${FTORCH_INSTALL}/lib64:${TORCH_ROOT}/lib:${LD_LIBRARY_PATH}"
+ENV LD_LIBRARY_PATH="${FTORCH_INSTALL}/lib64:${TORCH_ROOT}/lib:${LD_LIBRARY_PATH:-}"
 
-# ─────────────────────────────────────────────────────────────────────────────
-# 4. Clone, configure, patch configure.wrf, and compile WRF-Chem
-#
-# Key differences vs the Perlmutter build script:
-#   • No Cray-wrapper substitution (mpif90/mpicc kept as-is; no ftn/cc swap)
-#   • -cc=$(SCC) flag removed (not compatible with standard OpenMPI)
-#   • WRF_CHEM=1 exported so chemistry code is compiled in
-#   • NetCDF classic / large-file-support / no-NC4-compression flags set
-# ─────────────────────────────────────────────────────────────────────────────
+# ── 4. Copy YOUR modified WRF source into the container ──────────────────────
+# (produced by gather_wrf_source.sh — no git clone, no network needed)
+RUN rm -rf /container/WRF
+COPY docker_context/wrf_src/ /container/WRF/
+
+# ── 5. Configure, patch configure.wrf for FTorch, and compile WRF-Chem ───────
 RUN source /container/config_env.sh && \
+    export WRF_CHEM=1                      \
+           NETCDF_classic=1                \
+           WRFIO_NCD_LARGE_FILE_SUPPORT=1  \
+           USE_NETCDF4_FEATURES=0          \
+           PNETCDF_QUILT=0                 && \
     \
-    export WRF_CHEM=1                       \
-           NETCDF_classic=1                 \
-           WRFIO_NCD_LARGE_FILE_SUPPORT=1   \
-           USE_NETCDF4_FEATURES=0           \
-           PNETCDF_QUILT=0                  && \
-    \
-    rm -rf /container/WRF && \
-    git clone --branch ${WRF_BRANCH} --single-branch \
-        https://github.com/liranpeng/WRF.git /container/WRF && \
     cd /container/WRF && \
-    \
     ./clean -a && \
     \
-    # Configure: option 35 = dm+sm GNU (gfortran/gcc + MPI + OpenMP)
-    # option 1  = basic nesting
-    printf "35\n1\n" | ./configure && \
+    # option 34 = dmpar (pure MPI, GNU gfortran/gcc) — matches base image env
+    printf "34\n1\n" | ./configure && \
     \
-    # ── Patch configure.wrf for FTorch ───────────────────────────────────────
+    # ── Patch configure.wrf for FTorch ─────────────────────────────────────
     CFG=configure.wrf && \
     \
-    # Step A: prepend Makefile variable definitions (FTORCH_LIB, LIBTORCH_LIB)
-    # and the LIB_FTORCH / LIB_LOCAL hook.
-    # Single-quoted heredoc keeps $(…) as literal Makefile syntax.
+    # Prepend Makefile variable definitions and LIB_LOCAL hook
     { cat << 'MKEOF'
 FTORCH_LIB   := /opt/ftorch/lib64
 LIBTORCH_LIB := /opt/libtorch/lib
-# ---- FTorch + libtorch (CPU) ------------------------------------------------
+# ---- FTorch + libtorch (CPU) -----------------------------------------------
 LIB_FTORCH = \
   -L$(FTORCH_LIB) -lftorch \
   -L$(LIBTORCH_LIB) -Wl,-rpath,$(LIBTORCH_LIB):$(FTORCH_LIB) \
   -ltorch_cpu -lc10 -lstdc++ -ldl -lpthread
-# Hook into WRF's standard local-library variable
 LIB_LOCAL = $(LIB_FTORCH)
 
 MKEOF
     cat "${CFG}"; } > "${CFG}.new" && mv "${CFG}.new" "${CFG}" && \
     \
-    # Step B: append FTorch Fortran module search path to compiler flags
+    # Add FTorch module search path to Fortran compiler flags
     sed -i "s|^FCFLAGS[[:space:]]*=.*|& -I${FTORCH_MOD}|" "${CFG}" && \
     sed -i "s|^FFLAGS[[:space:]]*=.*|& -I${FTORCH_MOD}|"  "${CFG}" && \
     \
-    # Step C: remove -cc=$(SCC) (OpenMPI variant of mpif90 does not accept it)
+    # Remove -cc=$(SCC) (not accepted by standard OpenMPI mpif90 wrapper)
     sed -i 's/-cc=\$(SCC)/ /' "${CFG}" && \
     \
-    # Step D: append an explicit lib block at the end as belt-and-suspenders
+    # Append belt-and-suspenders LIB_FTORCH block at end of file
     cat >> "${CFG}" << 'MKEOF2'
 
-# ---- FTorch + libtorch (auto-appended, belt-and-suspenders) -----------------
+# ---- FTorch + libtorch (appended) ------------------------------------------
 LIB_FTORCH = \
   -L$(FTORCH_LIB) -lftorch \
   -L$(LIBTORCH_LIB) -Wl,-rpath,$(LIBTORCH_LIB):$(FTORCH_LIB) \
   -ltorch_cpu -lc10 -lstdc++ -ldl -lpthread
 MKEOF2
     \
-    # ── Compile ───────────────────────────────────────────────────────────────
-    export J="-j 8" && \
-    ./compile em_real 2>&1 | tee /container/compile_wrf.log && \
-    \
-    # Verify executables were produced
-    test -f ./main/wrf.exe  || { echo "ERROR: wrf.exe not built — check /container/compile_wrf.log"; exit 1; } && \
-    test -f ./main/real.exe || { echo "ERROR: real.exe not built — check /container/compile_wrf.log"; exit 1; } && \
-    \
+    # ── Compile ──────────────────────────────────────────────────────────────
+    ./compile -j 8 em_real 2>&1 | tee /container/compile_wrf.log && \
+    test -f ./main/wrf.exe  || { echo "ERROR: wrf.exe not built"; exit 1; } && \
+    test -f ./main/real.exe || { echo "ERROR: real.exe not built"; exit 1; } && \
     chmod -R a+rx /container
 
 CMD ["/bin/bash"]
