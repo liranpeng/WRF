@@ -13,7 +13,10 @@
 # Build command (from the directory that contains this Dockerfile
 # and the docker_context/ folder):
 #
-#   docker build -t wrf-chem-local .
+#   podman build --format docker -t wrf-chem-local:test .
+#
+# --format docker is required so that the SHELL directive is honoured
+# (Podman's default OCI format ignores SHELL and falls back to /bin/sh).
 #
 # Override FTorch / LibTorch versions at build time if needed:
 #   docker build \
@@ -33,14 +36,26 @@ ENV TORCH_ROOT=/opt/libtorch \
     FTORCH_INSTALL=/opt/ftorch
 
 # ── 1. Ensure cmake / wget / unzip are available ──────────────────────────────
-RUN if command -v yum &>/dev/null; then \
+# Tries package managers in order: dnf (Rocky/RHEL8+), yum, zypper, apt-get.
+# Falls back to a direct cmake binary install if none are found.
+# Redirects use >/dev/null 2>&1 (POSIX sh-safe) in case SHELL is ignored.
+RUN cmake --version >/dev/null 2>&1 && echo "cmake already present" || \
+    { command -v dnf >/dev/null 2>&1 && \
+        dnf install -y cmake wget unzip; } || \
+    { command -v yum >/dev/null 2>&1 && \
         yum install -y cmake3 wget unzip && \
-        ln -sf /usr/bin/cmake3 /usr/local/bin/cmake; \
-    else \
+        ln -sf "$(command -v cmake3 || echo /usr/bin/cmake3)" /usr/local/bin/cmake; } || \
+    { command -v zypper >/dev/null 2>&1 && \
+        zypper --non-interactive install cmake wget unzip; } || \
+    { command -v apt-get >/dev/null 2>&1 && \
         apt-get update && \
         apt-get install -y --no-install-recommends cmake wget unzip && \
-        rm -rf /var/lib/apt/lists/*; \
-    fi
+        rm -rf /var/lib/apt/lists/*; } || \
+    { echo "No package manager found; installing cmake binary" && \
+        wget -q https://github.com/Kitware/CMake/releases/download/v3.27.9/cmake-3.27.9-linux-x86_64.sh \
+            -O /tmp/cmake.sh && \
+        sh /tmp/cmake.sh --prefix=/usr/local --skip-license && \
+        rm /tmp/cmake.sh; }
 
 # ── 2. Download CPU-only LibTorch ─────────────────────────────────────────────
 RUN wget -q \
