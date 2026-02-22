@@ -12,23 +12,27 @@
 #
 # --format docker is required by Podman to honour the SHELL instruction.
 # Without it Podman falls back to /bin/sh and breaks bash-specific syntax.
+#
+# ── Why option 34, not 78 ────────────────────────────────────────────────────
+# On Perlmutter the working build script selects option 78 (INTEL ifx/icx
+# oneAPI LLVM dmpar) and then immediately replaces mpif90→ftn and mpicc→cc
+# in configure.wrf, so the actual compilers used are the Cray ftn/cc wrappers
+# (backed by gfortran under PrgEnv-gnu).  Cray wrappers are NOT available
+# inside a standalone container, so mirroring that trick is not possible.
+# Option 34 (GNU gfortran/gcc dmpar) produces an identical configure.wrf
+# except for the compiler-flag stanzas, and works directly with the OpenMPI
+# mpif90/mpicc wrappers we install below.
 
 FROM benjaminkirk/ncar-derecho-wrf:latest
 
 SHELL ["/bin/bash", "-c"]
 
 # ── Build-time knobs ─────────────────────────────────────────────────────────
-# LibTorch CPU-only cxx11-ABI wheel version
 ARG LIBTORCH_VERSION=2.1.0
-# FTorch tag – v1.0.0 is the first stable release (v0.6.x tags do not exist)
 ARG FTORCH_TAG=v1.0.0
-# WRF ./configure compiler option
-#   34 = GNU (gfortran/gcc)  dmpar  <-- safe default: image ships gfortran 7.5.0
-#        and we install OpenMPI below, so mpif90/mpicc are always available.
-#   78 = INTEL (ifx/icx) oneAPI LLVM dmpar -- only works if Intel oneAPI MPI
-#        is actually installed in the image (it is NOT in the base image).
+# 34 = GNU (gfortran/gcc) dmpar – matches the compilers in this image.
+# Override with --build-arg WRF_CONFIGURE_OPTION=35 for dm+sm, etc.
 ARG WRF_CONFIGURE_OPTION=34
-# Parallel jobs for ./compile
 ARG WRF_JOBS=8
 
 # ── LibTorch / FTorch install paths ─────────────────────────────────────────
@@ -55,14 +59,10 @@ RUN cmake --version >/dev/null 2>&1 && echo "cmake already present" || \
       rm /tmp/cmake.sh; }
 
 # ── 2. Install OpenMPI (provides mpif90 / mpicc for dmpar builds) ─────────────
-# The base image ships gfortran 7.5.0 but has NO MPI wrappers in PATH.
-# WRF's configcheck Makefile target calls `which mpif90` and `which mpicc`
-# and aborts with "Error 1" when they are missing, even though configure
-# itself accepts the option number.
-#
-# We install OpenMPI from the distro repository.  On openSUSE Leap the
-# package is openmpi4-devel (or openmpi3-devel on older releases).
-# The binaries land in /usr/lib64/mpi/gcc/openmpi4/bin/ (openSUSE convention).
+# The base image ships gfortran 7.5.0 but has no MPI wrappers in PATH.
+# WRF's configcheck Makefile target calls `which mpif90` / `which mpicc` and
+# aborts if they are missing.  On Perlmutter these come from the Cray ftn/cc
+# wrappers; inside the container we use the distro OpenMPI packages instead.
 RUN if command -v zypper >/dev/null 2>&1; then \
         zypper --non-interactive install openmpi4-devel 2>/dev/null || \
         zypper --non-interactive install openmpi3-devel 2>/dev/null || \
@@ -76,9 +76,9 @@ RUN if command -v zypper >/dev/null 2>&1; then \
         echo "ERROR: no supported package manager found"; exit 1; \
     fi
 
-# openSUSE installs MPI wrappers in a versioned subdirectory; add all
-# common variants to PATH so mpif90 / mpicc are always found regardless
-# of which OpenMPI version zypper selected.
+# openSUSE installs OpenMPI wrappers under a versioned subdirectory.
+# Add all common variants so mpif90 / mpicc are found regardless of the
+# exact version that zypper selected.
 ENV PATH="/usr/lib64/mpi/gcc/openmpi4/bin:\
 /usr/lib64/mpi/gcc/openmpi3/bin:\
 /usr/lib64/mpi/gcc/openmpi2/bin:\
@@ -129,16 +129,14 @@ ENV WRF_CHEM=1 \
     PNETCDF_QUILT=0
 
 # ── 7. Copy WRF source tree ──────────────────────────────────────────────────
-# The build context must be the root of the WRF source tree.
-# Consider adding a .dockerignore to exclude *.o / *.a / .git from the context.
 WORKDIR /container/WRF
 COPY . /container/WRF/
 
 # ── 8. Verify MPI and configure WRF non-interactively ───────────────────────
-# Print compiler/MPI locations so problems are visible in the build log.
-# ./clean -a removes any pre-compiled objects from the source tree.
-# printf supplies two newline-terminated answers to ./configure:
-#   1st: compiler/parallel choice  (ARG WRF_CONFIGURE_OPTION, default 34 = GNU dmpar)
+# Compiler/MPI locations are printed first so any PATH problem is visible in
+# the build log before we ever reach configcheck.
+# printf pipes two newline-terminated answers to ./configure:
+#   1st: compiler/parallel choice  (default 34 = GNU dmpar)
 #   2nd: nesting option            (1 = basic nesting)
 RUN echo "=== Compiler / MPI sanity check ===" && \
     echo "gfortran : $(command -v gfortran || echo NOT FOUND)" && \
@@ -153,30 +151,52 @@ RUN echo "=== Compiler / MPI sanity check ===" && \
     grep -i "configuration" /tmp/configure.log || true
 
 # ── 9. Patch configure.wrf to integrate FTorch + LibTorch ───────────────────
-# All edits use sed or printf – NO heredocs.
-# Heredocs inside Dockerfile RUN instructions are unreliable: the line-joiner
-# strips backslash-newlines before bash sees the command, so the heredoc
-# delimiter is never matched and the build fails with:
-#   "here-document at line 0 delimited by end-of-file (wanted `MKEOF')"
+# This mirrors the working Perlmutter build script.
 #
-# a) Add FTorch .mod search path to Fortran compiler flags.
-# b) Add FTorch .mod search path to the free-form Fortran flags.
-# c) Remove -cc=$(SCC) – OpenMPI mpif90 wrappers do not accept this flag.
-# d) Extend LDFLAGS_LOCAL with FTorch + LibTorch shared libraries + rpath.
-# e) Append a LIB_FTORCH make-variable block for downstream Makefile rules.
-#    printf uses single quotes so $(FTORCH_LIB) stays as a Make variable
-#    reference in the file rather than being expanded by bash.
+# (a) PREPEND Make variable definitions to configure.wrf (line 1 insertion).
+#     We use printf + cat rather than `sed -i "1i ..."` to avoid the complex
+#     multi-level escaping required to produce Makefile line-continuation
+#     characters (\<newline>) inside a Dockerfile RUN string.
+#
+#     What gets prepended (shell vars are expanded to real paths):
+#       FTORCH_LIB   := /opt/ftorch/lib64
+#       LIBTORCH_LIB := /opt/libtorch/lib
+#       LIB_FTORCH = \
+#         -L$(FTORCH_LIB) -lftorch \
+#         -L$(LIBTORCH_LIB) -Wl,-rpath,... -ltorch_cpu -lc10 -lstdc++ -ldl -lpthread
+#       LIB_LOCAL = $(LIB_FTORCH)   ← hooks FTorch into WRF's standard link step
+#
+#     The printf format string is single-quoted so $(FTORCH_LIB) etc. are
+#     passed literally to printf (Make variable references, not shell subshell).
+#     The two %s conversion specifiers are filled by the shell-expanded vars
+#     "${FTORCH_LIB}" and "${LIBTORCH_LIB}".
+#     Inside single-quoted printf: \n = newline, \\ = backslash,
+#     so \\\n = backslash + newline = Makefile line continuation.
+#
+# (b) Add the FTorch Fortran module search path to FCFLAGS and FFLAGS.
+#
+# (c) Remove -cc=$(SCC): the Perlmutter script also removes this; it is not
+#     accepted by OpenMPI's mpif90 wrapper (or by the Cray ftn wrapper).
+#
+# NOTE: The Perlmutter script also runs:
+#         sed -i 's/mpif90/ftn/'  configure.wrf
+#         sed -i 's/mpicc/cc/'   configure.wrf
+#       Those substitutions replace the generic MPI wrappers with Cray-specific
+#       wrappers (ftn/cc) that are only available on Perlmutter.  Inside this
+#       container we use OpenMPI's mpif90/mpicc instead, so we do NOT apply
+#       those two sed commands.
 RUN CFG=configure.wrf && \
-    sed -i "s|^FCFLAGS[[:space:]]*=.*|& -I${FTORCH_MOD}|"  "${CFG}" && \
-    sed -i "s|^FFLAGS[[:space:]]*=.*|& -I${FTORCH_MOD}|"   "${CFG}" && \
-    sed -i 's/-cc=\$(SCC)/ /'                               "${CFG}" && \
-    sed -i "s|^LDFLAGS_LOCAL[[:space:]]*=.*|& -L${FTORCH_LIB} -L${LIBTORCH_LIB} -lftorch -ltorch_cpu -lc10 -Wl,-rpath,${FTORCH_LIB}:${LIBTORCH_LIB}|" "${CFG}" && \
-    printf '\n# ---- FTorch + LibTorch (appended by Dockerfile) --------------------\nLIB_FTORCH = \\\n  -L$(FTORCH_LIB) -lftorch \\\n  -L$(LIBTORCH_LIB) -Wl,-rpath,$(LIBTORCH_LIB):$(FTORCH_LIB) \\\n  -ltorch_cpu -lc10 -lstdc++ -ldl -lpthread\n' >> "${CFG}"
+    { printf 'FTORCH_LIB   := %s\nLIBTORCH_LIB := %s\n# ---- FTorch + libtorch ----\nLIB_FTORCH = \\\n  -L$(FTORCH_LIB) -lftorch \\\n  -L$(LIBTORCH_LIB) -Wl,-rpath,$(LIBTORCH_LIB):$(FTORCH_LIB) \\\n  -ltorch_cpu -lc10 -lstdc++ -ldl -lpthread\n# Hook FTorch into WRF standard link variable\nLIB_LOCAL = $(LIB_FTORCH)\n\n' \
+          "${FTORCH_LIB}" "${LIBTORCH_LIB}"; \
+      cat "${CFG}"; } > /tmp/cfg_patched && mv /tmp/cfg_patched "${CFG}" && \
+    sed -i "s|^FCFLAGS[[:space:]]*=.*|& -I${FTORCH_MOD}|" "${CFG}" && \
+    sed -i "s|^FFLAGS[[:space:]]*=.*|& -I${FTORCH_MOD}|"  "${CFG}" && \
+    sed -i 's/-cc=\$(SCC)/ /'                              "${CFG}"
 
 # ── 10. Compile WRF-Chem ─────────────────────────────────────────────────────
-# Use ; (not &&) before test-f checks: when ./compile output is piped through
-# tee, bash sets $? to tee's exit code, not the compiler's.
-# The presence of wrf.exe and real.exe is the authoritative success indicator.
+# Use ; (not &&) before the test-f checks: when ./compile is piped through tee
+# bash sets $? to tee's exit code, not the compiler's.  Checking for the
+# executables is the authoritative success indicator.
 RUN ./compile -j "${WRF_JOBS}" em_real 2>&1 | tee /tmp/compile_wrf.log ; \
     test -f main/wrf.exe  || { echo "ERROR: wrf.exe not built";  tail -100 /tmp/compile_wrf.log; exit 1; } && \
     test -f main/real.exe || { echo "ERROR: real.exe not built"; tail -100 /tmp/compile_wrf.log; exit 1; }
