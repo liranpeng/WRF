@@ -3017,7 +3017,7 @@ OLD_CLOUD_NSUBMIX_LOOP: do nsub=1,nsubmix
 
       ! Liran add ML start ====================================
       use, intrinsic :: iso_c_binding
-      use, intrinsic :: iso_fortran_env, only: real32
+      use, intrinsic :: iso_fortran_env, only: real32, int32
       use ftorch, only: &
          torch_model, torch_tensor, &
          torch_model_load, torch_model_forward, &
@@ -3180,7 +3180,7 @@ OLD_CLOUD_NSUBMIX_LOOP: do nsub=1,nsubmix
       integer :: dev_idx
       ! Host arrays (FTorch v1.0.0 requires target attribute for c_loc interop)
       real(real32), allocatable, target :: input_array(:,:), output_array(:,:)
-      integer :: tensor_layout(2)   ! FTorch v1.0.0: dimension-order layout arg
+      integer(int32) :: tensor_layout(2)   ! FTorch v1.0.0: layout arg; kind=int32 must match ftorch_int
       real(real32) :: tmp_swap
       ! Misc
       integer :: idx
