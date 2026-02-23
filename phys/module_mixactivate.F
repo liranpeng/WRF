@@ -3022,7 +3022,7 @@ OLD_CLOUD_NSUBMIX_LOOP: do nsub=1,nsubmix
          torch_model, torch_tensor, &
          torch_model_load, torch_model_forward, &
          torch_kCPU, torch_kCUDA, &
-         torch_tensor_from_array_real32_2d   ! FTorch v1.0.0: _default_layout suffix removed
+         torch_tensor_from_array             ! generic: ftorch.f90 re-exports this; real32_2d specific is NOT re-exported
       ! Liran add ML end ====================================
 
       implicit none
@@ -4354,7 +4354,7 @@ tensor_layout = [1, 2]
          dev_idx   = int(0, kind=c_int)
          ! Input/Output tensor from host buffer (CPU)
          ! FTorch v1.0.0: layout arg inserted between array and device_type
-         call torch_tensor_from_array_real32_2d( &
+         call torch_tensor_from_array( &
             tin,  input_array,  tensor_layout, torch_kCPU, requires_grad=.false. )
 
          CALL wrf_debug(15,'tin finished')
@@ -4395,7 +4395,7 @@ tensor_layout = [1, 2]
          CALL wrf_debug(15, TRIM(msg))
          WRITE(msg,*) 'input_array(16,1)=hygro=', input_array(16,1)
          CALL wrf_debug(15, TRIM(msg))
-         call torch_tensor_from_array_real32_2d( &
+         call torch_tensor_from_array( &
             tout, output_array, tensor_layout, torch_kCPU, requires_grad=.false. )
             CALL wrf_debug(15,'tout finished')
          out_t(1) = tout
