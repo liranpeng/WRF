@@ -388,108 +388,274 @@ def print_multicomponent_results(res, label="Multi-Component Results"):
     print()
 
 
+def partition_from_activation(dg_nuc, dg_acc, dg_cor,
+                              sigma_nuc, sigma_acc, sigma_cor,
+                              f_num_nuc, f_num_acc, f_num_cor,
+                              f_act_nuc, f_act_acc, f_act_cor,
+                              CCN_total, q_total,
+                              rho_air=1.225, rho_aer=RHO_ANTH):
+    """
+    Estimate mass partitioning from observed activation fractions and CCN.
+
+    In WRF-Chem SORGAM, each mode has an activation fraction (fn variables
+    in registry.chem):
+        CCN_total = f_act_nuc * N_nuc + f_act_acc * N_acc + f_act_cor * N_cor
+
+    Given assumed number fractions (f_num) and observed CCN_total, we
+    back out the total number and each mode's number, then partition mass.
+
+    The physical logic:
+    -----------------------------------------------------------------------
+    Step 1: N_total = CCN_total / sum(f_act_i * f_num_i)
+
+        Because:  CCN = sum( f_act_i * f_num_i * N_total )
+        This gives the TOTAL particle number consistent with the
+        observed CCN and activation fractions.
+
+    Step 2: N_i = f_num_i * N_total  (number per mode)
+
+    Step 3: M3_i = N_i * dg_i^3 * es36_i   (volume per mode)
+
+    Step 4: mass_frac_i = M3_i / sum(M3_i)
+
+    Parameters
+    ----------
+    dg_nuc, dg_acc, dg_cor : float
+        Geometric mean number diameters [m].
+    sigma_nuc, sigma_acc, sigma_cor : float
+        Geometric standard deviations [-].
+    f_num_nuc, f_num_acc, f_num_cor : float
+        Assumed number fractions per mode (must sum to ~1).
+    f_act_nuc, f_act_acc, f_act_cor : float
+        Aerosol activation fractions per mode (0-1).
+        From WRF output: fn11, fn21, fn31 (or similar).
+    CCN_total : float
+        Total CCN number concentration [# cm^-3].
+    q_total : float
+        Total aerosol mass mixing ratio [kg kg^-1].
+    rho_air : float
+        Air density [kg m^-3] for unit conversion. Default 1.225.
+    rho_aer : float
+        Bulk aerosol density [kg m^-3] for mass consistency check.
+
+    Returns
+    -------
+    result : dict
+        Complete partitioning results including derived N_total, mode
+        numbers, mass fractions, and mass mixing ratios per mode.
+    """
+    # --- Step 1: Derive total N from CCN and activation fractions ---
+    f_sum = f_num_nuc + f_num_acc + f_num_cor
+    f_num_nuc /= f_sum
+    f_num_acc /= f_sum
+    f_num_cor /= f_sum
+
+    # Effective activated fraction of total population
+    f_act_eff = (f_act_nuc * f_num_nuc +
+                 f_act_acc * f_num_acc +
+                 f_act_cor * f_num_cor)
+
+    # CCN [# cm^-3] -> [# m^-3]
+    CCN_m3 = CCN_total * 1.0e6
+
+    N_total = CCN_m3 / f_act_eff  # total particle number [# m^-3]
+
+    # --- Step 2: Number per mode ---
+    N_nuc = f_num_nuc * N_total
+    N_acc = f_num_acc * N_total
+    N_cor = f_num_cor * N_total
+
+    # --- Step 3: 3rd moment (volume) per mode ---
+    es36_nuc = compute_es36(sigma_nuc)
+    es36_acc = compute_es36(sigma_acc)
+    es36_cor = compute_es36(sigma_cor)
+
+    M3_nuc = N_nuc * dg_nuc ** 3 * es36_nuc
+    M3_acc = N_acc * dg_acc ** 3 * es36_acc
+    M3_cor = N_cor * dg_cor ** 3 * es36_cor
+    M3_total = M3_nuc + M3_acc + M3_cor
+
+    # --- Step 4: Mass fractions ---
+    frac_nuc = M3_nuc / M3_total
+    frac_acc = M3_acc / M3_total
+    frac_cor = M3_cor / M3_total
+
+    # --- Convert q_total [kg/kg] to [ug m^-3] for absolute masses ---
+    # q [kg/kg] * rho_air [kg/m^3] = concentration [kg/m^3]
+    # * 1e9 = [ug/m^3]
+    q_total_ug = q_total * rho_air * 1.0e9  # [ug m^-3]
+
+    mass_nuc = frac_nuc * q_total_ug
+    mass_acc = frac_acc * q_total_ug
+    mass_cor = frac_cor * q_total_ug
+
+    # Mass mixing ratios per mode [kg/kg]
+    q_nuc = frac_nuc * q_total
+    q_acc = frac_acc * q_total
+    q_cor = frac_cor * q_total
+
+    return {
+        # Derived totals
+        'N_total': N_total,
+        'N_total_cm3': N_total * 1e-6,
+        'f_act_effective': f_act_eff,
+        # Number per mode
+        'N_nuc': N_nuc, 'N_acc': N_acc, 'N_cor': N_cor,
+        'N_nuc_cm3': N_nuc * 1e-6, 'N_acc_cm3': N_acc * 1e-6,
+        'N_cor_cm3': N_cor * 1e-6,
+        # CCN per mode
+        'CCN_nuc': f_act_nuc * N_nuc * 1e-6,
+        'CCN_acc': f_act_acc * N_acc * 1e-6,
+        'CCN_cor': f_act_cor * N_cor * 1e-6,
+        # es36
+        'es36_nuc': es36_nuc, 'es36_acc': es36_acc, 'es36_cor': es36_cor,
+        # 3rd moments
+        'M3_nuc': M3_nuc, 'M3_acc': M3_acc, 'M3_cor': M3_cor,
+        'M3_total': M3_total,
+        # Mass fractions
+        'frac_nuc': frac_nuc, 'frac_acc': frac_acc, 'frac_cor': frac_cor,
+        # Absolute mass [ug/m^3]
+        'mass_nuc_ug': mass_nuc, 'mass_acc_ug': mass_acc,
+        'mass_cor_ug': mass_cor, 'q_total_ug': q_total_ug,
+        # Mass mixing ratio per mode [kg/kg]
+        'q_nuc': q_nuc, 'q_acc': q_acc, 'q_cor': q_cor,
+        'q_total': q_total,
+    }
+
+
+def print_activation_results(res, label="Activation-based Partitioning"):
+    """Pretty-print partition_from_activation() output."""
+    print("=" * 70)
+    print(f"  {label}")
+    print("=" * 70)
+
+    print("\n  --- Step 1: Derive total N from CCN + activation fractions ---")
+    print(f"    Effective activation fraction = {res['f_act_effective']:.4f}")
+    print(f"    N_total = CCN / f_act_eff     = {res['N_total_cm3']:.2f} cm-3")
+
+    print("\n  --- Step 2: Number concentration per mode ---")
+    print(f"    {'Mode':<15} {'N [cm-3]':>12} {'CCN [cm-3]':>12}")
+    print(f"    {'Nuclei':<15} {res['N_nuc_cm3']:12.2f} {res['CCN_nuc']:12.2f}")
+    print(f"    {'Accumulation':<15} {res['N_acc_cm3']:12.2f} {res['CCN_acc']:12.2f}")
+    print(f"    {'Coarse':<15} {res['N_cor_cm3']:12.2f} {res['CCN_cor']:12.2f}")
+    print(f"    {'TOTAL':<15} {res['N_total_cm3']:12.2f} "
+          f"{res['CCN_nuc']+res['CCN_acc']+res['CCN_cor']:12.2f}")
+
+    print("\n  --- Step 3: 3rd moment (volume) per mode ---")
+    print(f"    {'Mode':<15} {'es36':>10} {'M3 [m3/m3]':>14}")
+    print(f"    {'Nuclei':<15} {res['es36_nuc']:10.4f} {res['M3_nuc']:14.4e}")
+    print(f"    {'Accumulation':<15} {res['es36_acc']:10.4f} {res['M3_acc']:14.4e}")
+    print(f"    {'Coarse':<15} {res['es36_cor']:10.4f} {res['M3_cor']:14.4e}")
+
+    print("\n  --- Step 4: Mass partitioning ---")
+    print(f"    {'Mode':<15} {'Mass frac':>10} {'q [kg/kg]':>14} {'Mass [ug/m3]':>14}")
+    print(f"    {'Nuclei':<15} {res['frac_nuc']:10.6f} {res['q_nuc']:14.4e} "
+          f"{res['mass_nuc_ug']:14.4e}")
+    print(f"    {'Accumulation':<15} {res['frac_acc']:10.6f} {res['q_acc']:14.4e} "
+          f"{res['mass_acc_ug']:14.4e}")
+    print(f"    {'Coarse':<15} {res['frac_cor']:10.6f} {res['q_cor']:14.4e} "
+          f"{res['mass_cor_ug']:14.4e}")
+    print(f"    {'TOTAL':<15} {1.0:10.6f} {res['q_total']:14.4e} "
+          f"{res['q_total_ug']:14.4e}")
+    print()
+
+
 # ---------------------------------------------------------------------------
-# Main: example with WRF-Chem SORGAM defaults
+# Main
 # ---------------------------------------------------------------------------
 if __name__ == "__main__":
 
-    # -----------------------------------------------------------------------
-    # User inputs
-    # -----------------------------------------------------------------------
-    # Geometric mean number diameters [m]
-    dg_nuc = DGININ_DEFAULT     # 0.01 um
-    dg_acc = DGINIA_DEFAULT     # 0.07 um
-    dg_cor = DGINIC_DEFAULT     # 1.0  um
+    # ===================================================================
+    # YOUR OBSERVATION-BASED CASE
+    # ===================================================================
+    #
+    # Known from observation / WRF output:
+    #   - Total aerosol mass mixing ratio:  4.5e-10  kg/kg
+    #   - Total CCN number concentration:   50       cm^-3
+    #   - Activation fraction (nuclei):     0.7      (WRF fn11)
+    #   - Activation fraction (accum):      0.8      (WRF fn21)
+    #   - Activation fraction (coarse):     1.0      (WRF fn31)
+    #
+    # Use SORGAM default diameters and sigma values.
+    # Assume typical number fractions (adjustable).
+    # ===================================================================
 
-    # Geometric standard deviations [-]
-    sigma_nuc = SGININ_DEFAULT  # 1.70
-    sigma_acc = SGINIA_DEFAULT  # 2.00
-    sigma_cor = SGINIC_DEFAULT  # 2.50
+    # --- SORGAM default distribution parameters ---
+    dg_nuc  = DGININ_DEFAULT   # 0.01  um  (nuclei/Aitken mode)
+    dg_acc  = DGINIA_DEFAULT   # 0.07  um  (accumulation mode)
+    dg_cor  = DGINIC_DEFAULT   # 1.0   um  (coarse mode)
 
-    # Number fractions  (must sum to 1; example: urban-like distribution)
-    f_nuc = 0.80    # 80% of particles by number in nuclei mode
-    f_acc = 0.19    # 19% in accumulation mode
-    f_cor = 0.01    #  1% in coarse mode
+    sigma_nuc = SGININ_DEFAULT # 1.70
+    sigma_acc = SGINIA_DEFAULT # 2.00
+    sigma_cor = SGINIC_DEFAULT # 2.50
 
-    # Total aerosol mass [ug m^-3]
-    q_total = 50.0
+    # --- Your observations ---
+    q_total    = 4.5e-10       # total aerosol mass mixing ratio [kg/kg]
+    CCN_total  = 50.0          # total CCN [# cm^-3]
+    f_act_nuc  = 0.7           # activation fraction, nuclei mode
+    f_act_acc  = 0.8           # activation fraction, accumulation mode
+    f_act_cor  = 1.0           # activation fraction, coarse mode
 
-    # Total number concentration [# m^-3]  (= total CCN if all activated)
-    N_total = 1.0e10    # 10^4 cm^-3 = 10^10 m^-3
+    # --- Assumed number fractions ---
+    # These control how N_total is distributed among modes.
+    # Typical remote/clean atmosphere: most particles by number in
+    # nuclei mode, fewer in accumulation, very few in coarse.
+    f_num_nuc = 0.80           # 80% of particles by NUMBER in nuclei
+    f_num_acc = 0.19           # 19% in accumulation
+    f_num_cor = 0.01           #  1% in coarse
 
-    # -----------------------------------------------------------------------
-    # Example 1: Single-density (bulk) partitioning
-    # -----------------------------------------------------------------------
-    res = partition_mass(
+    # --- Run the calculation ---
+    res = partition_from_activation(
         dg_nuc, dg_acc, dg_cor,
         sigma_nuc, sigma_acc, sigma_cor,
-        f_nuc, f_acc, f_cor,
-        q_total, N_total,
+        f_num_nuc, f_num_acc, f_num_cor,
+        f_act_nuc, f_act_acc, f_act_cor,
+        CCN_total, q_total,
     )
-    print_results(res, "Example 1: Single-bulk-density partitioning (SORGAM defaults)")
+    print_activation_results(res,
+        "Your case: q=4.5e-10 kg/kg, CCN=50 cm-3, f_act=0.7/0.8/1.0")
 
-    # -----------------------------------------------------------------------
-    # Example 2: Multi-component partitioning (matching SORGAM species)
-    # -----------------------------------------------------------------------
-    species = {
-        'SO4':   {'mass': 10.0, 'density': RHO_SO4},
-        'NH4':   {'mass':  3.0, 'density': RHO_NH4},
-        'NO3':   {'mass':  5.0, 'density': RHO_NO3},
-        'ORG':   {'mass': 15.0, 'density': RHO_ORG},
-        'EC':    {'mass':  4.0, 'density': RHO_ANTH},
-        'P25':   {'mass':  2.0, 'density': RHO_ANTH},
-        'Na':    {'mass':  1.0, 'density': RHO_NA},
-        'Cl':    {'mass':  1.0, 'density': RHO_CL},
-        'SOIL':  {'mass':  5.0, 'density': RHO_SOIL},
-        'SEAS':  {'mass':  4.0, 'density': RHO_SEAS},
-    }
-
-    res_mc = partition_mass_multicomponent(
-        dg_nuc, dg_acc, dg_cor,
-        sigma_nuc, sigma_acc, sigma_cor,
-        f_nuc, f_acc, f_cor,
-        N_total, species,
-    )
-    print_multicomponent_results(res_mc,
-        "Example 2: Multi-component partitioning (SORGAM species)")
-
-    # -----------------------------------------------------------------------
-    # Example 3: Show sensitivity to geometric mean diameter
-    # -----------------------------------------------------------------------
+    # --- Sensitivity: vary assumed number fractions ---
     print("=" * 70)
-    print("  Example 3: Sensitivity to geometric mean diameter")
+    print("  Sensitivity to assumed number fractions")
+    print("  (dg, sigma, q_total, CCN, f_act are all fixed)")
     print("=" * 70)
-    print(f"\n  Fixed: sigma_nuc={sigma_nuc}, sigma_acc={sigma_acc}, "
-          f"sigma_cor={sigma_cor}")
-    print(f"  Fixed: f_nuc={f_nuc}, f_acc={f_acc}, f_cor={f_cor}")
-    print(f"  Fixed: q_total={q_total} ug/m3, N_total={N_total:.2e} #/m3\n")
+    print(f"\n  {'f_nuc':>6} {'f_acc':>6} {'f_cor':>6} | "
+          f"{'N_tot':>8} | {'frac_nuc':>10} {'frac_acc':>10} {'frac_cor':>10} | "
+          f"{'q_nuc':>12} {'q_acc':>12} {'q_cor':>12}")
+    print(f"  {'':>6} {'':>6} {'':>6} | "
+          f"{'[cm-3]':>8} | {'':>10} {'':>10} {'':>10} | "
+          f"{'[kg/kg]':>12} {'[kg/kg]':>12} {'[kg/kg]':>12}")
+    print("  " + "-" * 110)
 
-    dg_nuc_range = [0.005e-6, 0.01e-6, 0.02e-6, 0.05e-6]
-    print(f"  {'dg_nuc [nm]':>12}  {'frac_nuc':>10}  {'frac_acc':>10}  {'frac_cor':>10}")
-    print("  " + "-" * 46)
-    for dg in dg_nuc_range:
-        r = partition_mass(dg, dg_acc, dg_cor,
-                           sigma_nuc, sigma_acc, sigma_cor,
-                           f_nuc, f_acc, f_cor,
-                           q_total, N_total)
-        print(f"  {dg*1e9:12.1f}  {r['frac_nuc']:10.6f}  "
-              f"{r['frac_acc']:10.6f}  {r['frac_cor']:10.6f}")
+    test_fracs = [
+        (0.90, 0.09, 0.01),   # dominated by nuclei
+        (0.80, 0.19, 0.01),   # typical (default)
+        (0.70, 0.28, 0.02),   # more accumulation
+        (0.50, 0.45, 0.05),   # bimodal
+        (0.30, 0.60, 0.10),   # accumulation dominated
+    ]
+
+    for fn, fa, fc in test_fracs:
+        r = partition_from_activation(
+            dg_nuc, dg_acc, dg_cor,
+            sigma_nuc, sigma_acc, sigma_cor,
+            fn, fa, fc,
+            f_act_nuc, f_act_acc, f_act_cor,
+            CCN_total, q_total,
+        )
+        print(f"  {fn:6.2f} {fa:6.2f} {fc:6.2f} | "
+              f"{r['N_total_cm3']:8.2f} | "
+              f"{r['frac_nuc']:10.6f} {r['frac_acc']:10.6f} "
+              f"{r['frac_cor']:10.6f} | "
+              f"{r['q_nuc']:12.4e} {r['q_acc']:12.4e} {r['q_cor']:12.4e}")
     print()
 
-    # -----------------------------------------------------------------------
-    # Verification: reproduce SORGAM es36 values
-    # -----------------------------------------------------------------------
+    # --- Verification ---
     print("=" * 70)
     print("  Verification: SORGAM es36 factors")
     print("=" * 70)
-    print(f"\n  esn36 (sigma={sigma_nuc}): {compute_es36(sigma_nuc):.6f}")
+    print(f"  esn36 (sigma={sigma_nuc}): {compute_es36(sigma_nuc):.6f}")
     print(f"  esa36 (sigma={sigma_acc}): {compute_es36(sigma_acc):.6f}")
     print(f"  esc36 (sigma={sigma_cor}): {compute_es36(sigma_cor):.6f}")
-
-    print(f"\n  SORGAM mass-to-M3 factors [m3 kg-1 * 1e-9]:")
-    f6dpim9 = (6.0 / np.pi) * 1.0e-9
-    print(f"    so4fac = f6dpim9/rhoso4 = {f6dpim9/RHO_SO4:.6e}")
-    print(f"    orgfac = f6dpim9/rhoorg = {f6dpim9/RHO_ORG:.6e}")
-    print(f"    anthfac= f6dpim9/rhoanth= {f6dpim9/RHO_ANTH:.6e}")
-    print(f"    soilfac= f6dpim9/rhosoil= {f6dpim9/RHO_SOIL:.6e}")
     print()
