@@ -28,15 +28,30 @@ import numpy as np
 # WRF-Chem SORGAM default parameters (from module_data_sorgam.F)
 # ---------------------------------------------------------------------------
 
-# Default geometric mean number diameters [m]
-DGININ_DEFAULT = 0.01e-6   # Aitken (nuclei) mode
-DGINIA_DEFAULT = 0.07e-6   # Accumulation mode
-DGINIC_DEFAULT = 1.0e-6    # Coarse mode
-
 # Default geometric standard deviations [-]
 SGININ_DEFAULT = 1.70      # Aitken (nuclei) mode
 SGINIA_DEFAULT = 2.00      # Accumulation mode
 SGINIC_DEFAULT = 2.50      # Coarse mode
+
+# Code initialization number diameters [m] (module_data_sorgam.F lines 740-749)
+# These are only used at the very first timestep; SORGAM diagnoses dg
+# from prognostic moments (M0, M3) at every subsequent timestep.
+DGININ_CODE = 0.01e-6   # Aitken (nuclei) mode
+DGINIA_CODE = 0.07e-6   # Accumulation mode
+DGINIC_CODE = 1.0e-6    # Coarse mode
+
+# Literature volume median diameters [m] (Whitby 1978; Binkowski & Shankar 1995)
+# These represent typical ambient conditions and are the values commonly cited
+# for SORGAM (0.04, 0.16, 1.2 um).
+DGVOL_NUC = 0.04e-6    # Aitken (nuclei) mode
+DGVOL_ACC = 0.16e-6    # Accumulation mode
+DGVOL_COR = 1.2e-6     # Coarse mode
+
+# Convert literature volume diameters to number diameters:
+#   dg_number = dg_volume / exp(3 * ln(sigma_g)^2)
+DGININ_DEFAULT = DGVOL_NUC / np.exp(3.0 * np.log(SGININ_DEFAULT)**2)
+DGINIA_DEFAULT = DGVOL_ACC / np.exp(3.0 * np.log(SGINIA_DEFAULT)**2)
+DGINIC_DEFAULT = DGVOL_COR / np.exp(3.0 * np.log(SGINIC_DEFAULT)**2)
 
 # Component densities [kg m^-3] from module_data_sorgam.F
 RHO_SO4  = 1.8e3
@@ -566,34 +581,41 @@ def print_activation_results(res, label="Activation-based Partitioning"):
 if __name__ == "__main__":
 
     # ===================================================================
-    # YOUR OBSERVATION-BASED CASE
+    # MERRA-2 SULFATE + ARM CCN CASE
     # ===================================================================
     #
-    # Known from observation / WRF output:
-    #   - Total aerosol mass mixing ratio:  4.5e-10  kg/kg
-    #   - Total CCN number concentration:   50       cm^-3
-    #   - Activation fraction (nuclei):     0.7      (WRF fn11)
-    #   - Activation fraction (accum):      0.8      (WRF fn21)
-    #   - Activation fraction (coarse):     1.0      (WRF fn31)
+    # Known from observation / ML emulator:
+    #   - Total sulfate mass mixing ratio:  4.5e-10  kg/kg  (MERRA-2)
+    #   - Total CCN number concentration:   50       cm^-3  (ARM)
+    #   - Activation fraction (nuclei):     0.43     (ML emulator)
+    #   - Activation fraction (accum):      0.64     (ML emulator)
+    #   - Activation fraction (coarse):     1.0
     #
-    # Use SORGAM default diameters and sigma values.
-    # Assume typical number fractions (adjustable).
+    # Diameters: literature volume medians (Whitby 1978):
+    #   nuclei=0.04um, accum=0.16um, coarse=1.2um
+    #   converted to number medians via dg_n = dg_v / exp(3*ln(sig)^2)
     # ===================================================================
 
-    # --- SORGAM default distribution parameters ---
-    dg_nuc  = DGININ_DEFAULT   # 0.01  um  (nuclei/Aitken mode)
-    dg_acc  = DGINIA_DEFAULT   # 0.07  um  (accumulation mode)
-    dg_cor  = DGINIC_DEFAULT   # 1.0   um  (coarse mode)
+    # --- SORGAM distribution parameters (literature-based) ---
+    dg_nuc  = DGININ_DEFAULT   # from 0.04 um volume median
+    dg_acc  = DGINIA_DEFAULT   # from 0.16 um volume median
+    dg_cor  = DGINIC_DEFAULT   # from 1.2  um volume median
 
     sigma_nuc = SGININ_DEFAULT # 1.70
     sigma_acc = SGINIA_DEFAULT # 2.00
     sigma_cor = SGINIC_DEFAULT # 2.50
 
+    print(f"  Number diameters: nuc={dg_nuc*1e6:.4f} um, "
+          f"acc={dg_acc*1e6:.4f} um, cor={dg_cor*1e6:.4f} um")
+    print(f"  Volume diameters: nuc={DGVOL_NUC*1e6:.2f} um, "
+          f"acc={DGVOL_ACC*1e6:.2f} um, cor={DGVOL_COR*1e6:.2f} um")
+    print()
+
     # --- Your observations ---
-    q_total    = 4.5e-10       # total aerosol mass mixing ratio [kg/kg]
+    q_total    = 4.5e-10       # total sulfate mass mixing ratio [kg/kg]
     CCN_total  = 50.0          # total CCN [# cm^-3]
-    f_act_nuc  = 0.7           # activation fraction, nuclei mode
-    f_act_acc  = 0.8           # activation fraction, accumulation mode
+    f_act_nuc  = 0.43          # activation fraction, nuclei mode (ML emulator)
+    f_act_acc  = 0.64          # activation fraction, accumulation mode
     f_act_cor  = 1.0           # activation fraction, coarse mode
 
     # --- Assumed number fractions ---
@@ -613,7 +635,7 @@ if __name__ == "__main__":
         CCN_total, q_total,
     )
     print_activation_results(res,
-        "Your case: q=4.5e-10 kg/kg, CCN=50 cm-3, f_act=0.7/0.8/1.0")
+        "MERRA-2/ARM: q=4.5e-10 kg/kg, CCN=50 cm-3, f_act=0.43/0.64/1.0")
 
     # --- Sensitivity: vary assumed number fractions ---
     print("=" * 70)
