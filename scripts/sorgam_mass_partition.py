@@ -33,25 +33,12 @@ SGININ_DEFAULT = 1.70      # Aitken (nuclei) mode
 SGINIA_DEFAULT = 2.00      # Accumulation mode
 SGINIC_DEFAULT = 2.50      # Coarse mode
 
-# Code initialization number diameters [m] (module_data_sorgam.F lines 740-749)
-# These are only used at the very first timestep; SORGAM diagnoses dg
-# from prognostic moments (M0, M3) at every subsequent timestep.
-DGININ_CODE = 0.01e-6   # Aitken (nuclei) mode
-DGINIA_CODE = 0.07e-6   # Accumulation mode
-DGINIC_CODE = 1.0e-6    # Coarse mode
-
-# Literature volume median diameters [m] (Whitby 1978; Binkowski & Shankar 1995)
-# These represent typical ambient conditions and are the values commonly cited
-# for SORGAM (0.04, 0.16, 1.2 um).
-DGVOL_NUC = 0.04e-6    # Aitken (nuclei) mode
-DGVOL_ACC = 0.16e-6    # Accumulation mode
-DGVOL_COR = 1.2e-6     # Coarse mode
-
-# Convert literature volume diameters to number diameters:
-#   dg_number = dg_volume / exp(3 * ln(sigma_g)^2)
-DGININ_DEFAULT = DGVOL_NUC / np.exp(3.0 * np.log(SGININ_DEFAULT)**2)
-DGINIA_DEFAULT = DGVOL_ACC / np.exp(3.0 * np.log(SGINIA_DEFAULT)**2)
-DGINIC_DEFAULT = DGVOL_COR / np.exp(3.0 * np.log(SGINIC_DEFAULT)**2)
+# Initial geometric mean diameters [m] (module_data_sorgam.F lines 740-749)
+# Updated to Whitby (1978) / Binkowski & Shankar (1995) values:
+#   0.04, 0.16, 1.2 um for nuclei, accumulation, coarse modes.
+DGININ_DEFAULT = 0.04e-6   # Aitken (nuclei) mode
+DGINIA_DEFAULT = 0.16e-6   # Accumulation mode
+DGINIC_DEFAULT = 1.2e-6    # Coarse mode
 
 # Component densities [kg m^-3] from module_data_sorgam.F
 RHO_SO4  = 1.8e3
@@ -591,24 +578,21 @@ if __name__ == "__main__":
     #   - Activation fraction (accum):      0.64     (ML emulator)
     #   - Activation fraction (coarse):     1.0
     #
-    # Diameters: literature volume medians (Whitby 1978):
+    # Diameters: Whitby (1978) values matching module_data_sorgam.F:
     #   nuclei=0.04um, accum=0.16um, coarse=1.2um
-    #   converted to number medians via dg_n = dg_v / exp(3*ln(sig)^2)
     # ===================================================================
 
-    # --- SORGAM distribution parameters (literature-based) ---
-    dg_nuc  = DGININ_DEFAULT   # from 0.04 um volume median
-    dg_acc  = DGINIA_DEFAULT   # from 0.16 um volume median
-    dg_cor  = DGINIC_DEFAULT   # from 1.2  um volume median
+    # --- SORGAM distribution parameters ---
+    dg_nuc  = DGININ_DEFAULT   # 0.04 um
+    dg_acc  = DGINIA_DEFAULT   # 0.16 um
+    dg_cor  = DGINIC_DEFAULT   # 1.2  um
 
     sigma_nuc = SGININ_DEFAULT # 1.70
     sigma_acc = SGINIA_DEFAULT # 2.00
     sigma_cor = SGINIC_DEFAULT # 2.50
 
-    print(f"  Number diameters: nuc={dg_nuc*1e6:.4f} um, "
-          f"acc={dg_acc*1e6:.4f} um, cor={dg_cor*1e6:.4f} um")
-    print(f"  Volume diameters: nuc={DGVOL_NUC*1e6:.2f} um, "
-          f"acc={DGVOL_ACC*1e6:.2f} um, cor={DGVOL_COR*1e6:.2f} um")
+    print(f"  Diameters: nuc={dg_nuc*1e6:.2f} um, "
+          f"acc={dg_acc*1e6:.2f} um, cor={dg_cor*1e6:.2f} um")
     print()
 
     # --- Your observations ---
