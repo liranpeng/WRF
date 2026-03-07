@@ -568,100 +568,133 @@ def print_activation_results(res, label="Activation-based Partitioning"):
 if __name__ == "__main__":
 
     # ===================================================================
-    # MERRA-2 SULFATE + ARM CCN CASE
+    # MERRA-2 SULFATE + ARM CCN CASE (2-MODE: Aitken + Accumulation)
     # ===================================================================
+    #
+    # Sulfate is predominantly fine-mode aerosol, so we use only the
+    # nuclei (Aitken) and accumulation modes (no coarse).
     #
     # Known from observation / ML emulator:
     #   - Total sulfate mass mixing ratio:  4.5e-10  kg/kg  (MERRA-2)
     #   - Total CCN number concentration:   50       cm^-3  (ARM)
     #   - Activation fraction (nuclei):     0.43     (ML emulator)
     #   - Activation fraction (accum):      0.64     (ML emulator)
-    #   - Activation fraction (coarse):     1.0
     #
     # Diameters: Whitby (1978) values matching module_data_sorgam.F:
-    #   nuclei=0.04um, accum=0.16um, coarse=1.2um
+    #   nuclei=0.04um, accum=0.16um
     # ===================================================================
 
     # --- SORGAM distribution parameters ---
-    dg_nuc  = DGININ_DEFAULT   # 0.04 um
-    dg_acc  = DGINIA_DEFAULT   # 0.16 um
-    dg_cor  = DGINIC_DEFAULT   # 1.2  um
+    dg_nuc    = DGININ_DEFAULT   # 0.04 um
+    dg_acc    = DGINIA_DEFAULT   # 0.16 um
+    sigma_nuc = SGININ_DEFAULT   # 1.70
+    sigma_acc = SGINIA_DEFAULT   # 2.00
 
-    sigma_nuc = SGININ_DEFAULT # 1.70
-    sigma_acc = SGINIA_DEFAULT # 2.00
-    sigma_cor = SGINIC_DEFAULT # 2.50
+    # --- Observations ---
+    q_total   = 4.5e-10          # total sulfate mass mixing ratio [kg/kg]
+    CCN_total = 50.0             # total CCN [# cm^-3]
+    f_act_nuc = 0.43             # activation fraction, nuclei mode
+    f_act_acc = 0.64             # activation fraction, accumulation mode
 
-    print(f"  Diameters: nuc={dg_nuc*1e6:.2f} um, "
-          f"acc={dg_acc*1e6:.2f} um, cor={dg_cor*1e6:.2f} um")
+    # --- Assumed number fractions (2-mode, no coarse) ---
+    f_num_nuc = 0.80             # 80% of particles by NUMBER in nuclei
+    f_num_acc = 0.20             # 20% in accumulation
+
+    print(f"  Diameters: nuc={dg_nuc*1e6:.2f} um, acc={dg_acc*1e6:.2f} um")
+    print(f"  Sigma:     nuc={sigma_nuc}, acc={sigma_acc}")
     print()
 
-    # --- Your observations ---
-    q_total    = 4.5e-10       # total sulfate mass mixing ratio [kg/kg]
-    CCN_total  = 50.0          # total CCN [# cm^-3]
-    f_act_nuc  = 0.43          # activation fraction, nuclei mode (ML emulator)
-    f_act_acc  = 0.64          # activation fraction, accumulation mode
-    f_act_cor  = 1.0           # activation fraction, coarse mode
-
-    # --- Assumed number fractions ---
-    # These control how N_total is distributed among modes.
-    # Typical remote/clean atmosphere: most particles by number in
-    # nuclei mode, fewer in accumulation, very few in coarse.
-    f_num_nuc = 0.80           # 80% of particles by NUMBER in nuclei
-    f_num_acc = 0.19           # 19% in accumulation
-    f_num_cor = 0.01           #  1% in coarse
-
-    # --- Run the calculation ---
+    # --- Run 2-mode calculation (f_num_cor=0, f_act_cor irrelevant) ---
     res = partition_from_activation(
-        dg_nuc, dg_acc, dg_cor,
-        sigma_nuc, sigma_acc, sigma_cor,
-        f_num_nuc, f_num_acc, f_num_cor,
-        f_act_nuc, f_act_acc, f_act_cor,
+        dg_nuc, dg_acc, DGINIC_DEFAULT,
+        sigma_nuc, sigma_acc, SGINIC_DEFAULT,
+        f_num_nuc, f_num_acc, 0.0,
+        f_act_nuc, f_act_acc, 1.0,
         CCN_total, q_total,
     )
-    print_activation_results(res,
-        "MERRA-2/ARM: q=4.5e-10 kg/kg, CCN=50 cm-3, f_act=0.43/0.64/1.0")
+
+    # --- Print results (2-mode only) ---
+    print("=" * 70)
+    print("  MERRA-2/ARM 2-mode: q=4.5e-10 kg/kg, CCN=50 cm-3")
+    print("  f_act=0.43/0.64 (nuc/acc), dg=0.04/0.16 um")
+    print("=" * 70)
+
+    f_act_eff = f_act_nuc * f_num_nuc + f_act_acc * f_num_acc
+    N_tot = CCN_total / f_act_eff
+
+    print(f"\n  Step 1: Derive total N from CCN + activation fractions")
+    print(f"    f_act_eff = {f_act_nuc}*{f_num_nuc} + {f_act_acc}*{f_num_acc}"
+          f" = {f_act_eff:.4f}")
+    print(f"    N_total = {CCN_total} / {f_act_eff:.4f} = {N_tot:.2f} cm-3")
+
+    print(f"\n  Step 2: Number concentration per mode")
+    print(f"    {'Mode':<15} {'N [cm-3]':>12} {'CCN [cm-3]':>12}")
+    print(f"    {'Nuclei (so4ai)':<15} {res['N_nuc_cm3']:12.2f}"
+          f" {res['CCN_nuc']:12.2f}")
+    print(f"    {'Accum  (so4aj)':<15} {res['N_acc_cm3']:12.2f}"
+          f" {res['CCN_acc']:12.2f}")
+    print(f"    {'TOTAL':<15} {res['N_total_cm3']:12.2f}"
+          f" {res['CCN_nuc']+res['CCN_acc']:12.2f}")
+
+    print(f"\n  Step 3: 3rd moment (volume) per mode")
+    print(f"    es36_nuc = exp(4.5 * ln({sigma_nuc})^2) = {res['es36_nuc']:.4f}")
+    print(f"    es36_acc = exp(4.5 * ln({sigma_acc})^2) = {res['es36_acc']:.4f}")
+    print(f"    M3_nuc = {res['N_nuc_cm3']:.2f}*1e6 * ({dg_nuc*1e6:.2f}e-6)^3"
+          f" * {res['es36_nuc']:.4f} = {res['M3_nuc']:.4e}")
+    print(f"    M3_acc = {res['N_acc_cm3']:.2f}*1e6 * ({dg_acc*1e6:.2f}e-6)^3"
+          f" * {res['es36_acc']:.4f} = {res['M3_acc']:.4e}")
+
+    print(f"\n  Step 4: Mass partitioning")
+    print(f"    {'Mode':<15} {'Mass frac':>10} {'q [kg/kg]':>14}")
+    print(f"    {'-'*41}")
+    print(f"    {'so4ai (nuc)':<15} {res['frac_nuc']:10.4f}"
+          f" {res['q_nuc']:14.4e}")
+    print(f"    {'so4aj (acc)':<15} {res['frac_acc']:10.4f}"
+          f" {res['q_acc']:14.4e}")
+    print(f"    {'TOTAL':<15} {1.0:10.4f} {res['q_total']:14.4e}")
+    print()
 
     # --- Sensitivity: vary assumed number fractions ---
     print("=" * 70)
-    print("  Sensitivity to assumed number fractions")
-    print("  (dg, sigma, q_total, CCN, f_act are all fixed)")
+    print("  Sensitivity to assumed number fractions (2-mode)")
     print("=" * 70)
-    print(f"\n  {'f_nuc':>6} {'f_acc':>6} {'f_cor':>6} | "
-          f"{'N_tot':>8} | {'frac_nuc':>10} {'frac_acc':>10} {'frac_cor':>10} | "
-          f"{'q_nuc':>12} {'q_acc':>12} {'q_cor':>12}")
-    print(f"  {'':>6} {'':>6} {'':>6} | "
-          f"{'[cm-3]':>8} | {'':>10} {'':>10} {'':>10} | "
-          f"{'[kg/kg]':>12} {'[kg/kg]':>12} {'[kg/kg]':>12}")
-    print("  " + "-" * 110)
+    print(f"\n  {'f_nuc':>6} {'f_acc':>6} | {'N_tot':>8} |"
+          f" {'frac_nuc':>10} {'frac_acc':>10} |"
+          f" {'q_nuc':>14} {'q_acc':>14}")
+    print(f"  {'':>6} {'':>6} | {'[cm-3]':>8} |"
+          f" {'(so4ai)':>10} {'(so4aj)':>10} |"
+          f" {'[kg/kg]':>14} {'[kg/kg]':>14}")
+    print("  " + "-" * 78)
 
     test_fracs = [
-        (0.90, 0.09, 0.01),   # dominated by nuclei
-        (0.80, 0.19, 0.01),   # typical (default)
-        (0.70, 0.28, 0.02),   # more accumulation
-        (0.50, 0.45, 0.05),   # bimodal
-        (0.30, 0.60, 0.10),   # accumulation dominated
+        (0.95, 0.05),
+        (0.90, 0.10),
+        (0.85, 0.15),
+        (0.80, 0.20),   # default
+        (0.70, 0.30),
+        (0.50, 0.50),
     ]
 
-    for fn, fa, fc in test_fracs:
+    for fn, fa in test_fracs:
         r = partition_from_activation(
-            dg_nuc, dg_acc, dg_cor,
-            sigma_nuc, sigma_acc, sigma_cor,
-            fn, fa, fc,
-            f_act_nuc, f_act_acc, f_act_cor,
+            dg_nuc, dg_acc, DGINIC_DEFAULT,
+            sigma_nuc, sigma_acc, SGINIC_DEFAULT,
+            fn, fa, 0.0,
+            f_act_nuc, f_act_acc, 1.0,
             CCN_total, q_total,
         )
-        print(f"  {fn:6.2f} {fa:6.2f} {fc:6.2f} | "
-              f"{r['N_total_cm3']:8.2f} | "
-              f"{r['frac_nuc']:10.6f} {r['frac_acc']:10.6f} "
-              f"{r['frac_cor']:10.6f} | "
-              f"{r['q_nuc']:12.4e} {r['q_acc']:12.4e} {r['q_cor']:12.4e}")
+        marker = " <-- default" if fn == 0.80 else ""
+        print(f"  {fn:6.2f} {fa:6.2f} | {r['N_total_cm3']:8.2f} |"
+              f" {r['frac_nuc']:10.6f} {r['frac_acc']:10.6f} |"
+              f" {r['q_nuc']:14.4e} {r['q_acc']:14.4e}{marker}")
     print()
 
     # --- Verification ---
     print("=" * 70)
-    print("  Verification: SORGAM es36 factors")
+    print("  Verification")
     print("=" * 70)
     print(f"  esn36 (sigma={sigma_nuc}): {compute_es36(sigma_nuc):.6f}")
     print(f"  esa36 (sigma={sigma_acc}): {compute_es36(sigma_acc):.6f}")
-    print(f"  esc36 (sigma={sigma_cor}): {compute_es36(sigma_cor):.6f}")
+    print(f"  Diameter ratio: dg_acc/dg_nuc = {dg_acc/dg_nuc:.1f}")
+    print(f"  Volume ratio:   (dg_acc/dg_nuc)^3 = {(dg_acc/dg_nuc)**3:.0f}")
     print()
