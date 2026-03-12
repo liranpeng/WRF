@@ -482,6 +482,44 @@ variables = [
     # -- Tropopause diagnostics --
     ("tropo_p",         "Time, south_north, west_east", "Tropopause pressure",                          "Pa",          "Optional"),
     ("tropo_z",         "Time, south_north, west_east", "Tropopause height",                            "m",           "Optional"),
+    # -- Dust 3D wet deposition --
+    ("dustwd_1",        "Time, bottom_top, south_north, west_east", "Dust loss by wet deposition bin 1","ug/kg-dryair","Optional"),
+    ("dustwd_2",        "Time, bottom_top, south_north, west_east", "Dust loss by wet deposition bin 2","ug/kg-dryair","Optional"),
+    ("dustwd_3",        "Time, bottom_top, south_north, west_east", "Dust loss by wet deposition bin 3","ug/kg-dryair","Optional"),
+    ("dustwd_4",        "Time, bottom_top, south_north, west_east", "Dust loss by wet deposition bin 4","ug/kg-dryair","Optional"),
+    ("dustwd_5",        "Time, bottom_top, south_north, west_east", "Dust loss by wet deposition bin 5","ug/kg-dryair","Optional"),
+    # -- Chemical tendency diagnostics (enable with chemdiag=1 in namelist) --
+    ("chem_co",         "Time, bottom_top, south_north, west_east", "Accumulated chemical tendency for CO  [chemdiag=1]", "ppmv","Optional"),
+    ("chem_o3",         "Time, bottom_top, south_north, west_east", "Accumulated chemical tendency for O3  [chemdiag=1]", "ppmv","Optional"),
+    ("chem_no",         "Time, bottom_top, south_north, west_east", "Accumulated chemical tendency for NO  [chemdiag=1]", "ppmv","Optional"),
+    ("chem_no2",        "Time, bottom_top, south_north, west_east", "Accumulated chemical tendency for NO2 [chemdiag=1]", "ppmv","Optional"),
+    ("chem_hno3",       "Time, bottom_top, south_north, west_east", "Accumulated chemical tendency for HNO3 [chemdiag=1]","ppmv","Optional"),
+    ("chem_ho",         "Time, bottom_top, south_north, west_east", "Accumulated chemical tendency for HO  [chemdiag=1]", "ppmv","Optional"),
+    ("chem_ho2",        "Time, bottom_top, south_north, west_east", "Accumulated chemical tendency for HO2 [chemdiag=1]", "ppmv","Optional"),
+    # -- Aerosol OC breakdown (enable with aero_diag_opt=1 in namelist) --
+    ("hoa_a01",         "Time, bottom_top, south_north, west_east", "Hydrophobic anthropogenic OA bin 1 [aero_diag_opt=1]","ug m-3","Optional"),
+    ("soa_a01",         "Time, bottom_top, south_north, west_east", "Secondary organic aerosol bin 1    [aero_diag_opt=1]","ug m-3","Optional"),
+    ("bboa_a01",        "Time, bottom_top, south_north, west_east", "Biomass burning OA bin 1           [aero_diag_opt=1]","ug m-3","Optional"),
+    ("bbsoa_a01",       "Time, bottom_top, south_north, west_east", "Biomass burning SOA bin 1          [aero_diag_opt=1]","ug m-3","Optional"),
+    ("totoa_a01",       "Time, bottom_top, south_north, west_east", "Total OA bin 1                     [aero_diag_opt=1]","ug m-3","Optional"),
+    # -- Aerosol surface area (enable with aero_srf_area_diag=1 in namelist) --
+    ("sulf_srf_area",   "Time, bottom_top, south_north, west_east", "Sulfate aerosol surface area  [aero_srf_area_diag=1]","cm2",  "Optional"),
+    ("oc_srf_area",     "Time, bottom_top, south_north, west_east", "Hydrophilic OC aerosol surface area [aero_srf_area_diag=1]","cm2","Optional"),
+    ("bc_srf_area",     "Time, bottom_top, south_north, west_east", "Hydrophilic BC aerosol surface area [aero_srf_area_diag=1]","cm2","Optional"),
+    # -- Aerosol pH --
+    ("ph_aer01",        "Time, bottom_top, south_north, west_east", "H+ concentration in aerosol bin 1", "mol/kg",     "Optional"),
+    ("ph_aer02",        "Time, bottom_top, south_north, west_east", "H+ concentration in aerosol bin 2", "mol/kg",     "Optional"),
+    ("ph_aer03",        "Time, bottom_top, south_north, west_east", "H+ concentration in aerosol bin 3", "mol/kg",     "Optional"),
+    ("ph_aer04",        "Time, bottom_top, south_north, west_east", "H+ concentration in aerosol bin 4", "mol/kg",     "Optional"),
+    # -- Actinic flux (radiation) --
+    ("af_dir",          "Time, bottom_top, south_north, west_east", "Actinic flux direct",               "W m-2 nm-1", "Optional"),
+    ("af_up",           "Time, bottom_top, south_north, west_east", "Actinic flux upwelling",            "W m-2 nm-1", "Optional"),
+    ("af_dn",           "Time, bottom_top, south_north, west_east", "Actinic flux downwelling",          "W m-2 nm-1", "Optional"),
+    # -- Deposition velocities per species --
+    ("dvel_no2",        "Time, klevs_for_dvel, south_north, west_east", "NO2 deposition velocity",      "cm/s",        "Optional"),
+    ("dvel_nh3",        "Time, klevs_for_dvel, south_north, west_east", "NH3 deposition velocity",      "cm/s",        "Optional"),
+    ("dvel_hno3",       "Time, klevs_for_dvel, south_north, west_east", "HNO3 deposition velocity",     "cm/s",        "Optional"),
+    ("dvel_so2",        "Time, klevs_for_dvel, south_north, west_east", "SO2 deposition velocity",      "cm/s",        "Optional"),
     # -- Standard WRF variables not in history by default --
     ("RAINNCV",         "Time, south_north, west_east", "TIME-STEP NONCONVECTIVE PRECIPITATION (restart only, not history)", "mm", "Optional"),
     ("PREC_ACC_NC",     "Time, south_north, west_east", "Accumulated precip over interval (requires PREC_ACC_DT > 0 in namelist)", "mm", "Optional"),
