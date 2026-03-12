@@ -1,0 +1,65 @@
+# ============================================================
+# WRF dual-stream iofields configuration
+#
+# Stream 0 (wrfout):   10-min, Both + 13 selected chem vars
+# Stream 2 (auxhist2): 60-min, Both + all Chem vars
+# ============================================================
+
+# Stream 0: remove 137 WRF-Chem-only vars
+# Kept chem vars: AOD_OUT, CLDFRA2, NC_DIAG, RAINPROD, ac0cw, anthcw, corncw, nu0cw, seascw, so4ai, so4aj, so4cwi, so4cwj
+-:h:0:AOD2D_OUT,ATOP2D_OUT,EXTCOF55,EVAPPROD,ICN_DIAG,E_NH3,EBIO_ISO,EBIO_API,ACTNH3,DRY_DEP_LEN
+-:h:0:DRYDEPVEL,dvel_o3,UST_T,ROUGH_COR,SMOIS_COR,LAI_VEGMASK,DMS_0,PM2_5_DRY,PM10,PHOTR2
+-:h:0:PHOTR4,SNU,SAC,PV,GAMN2O5,CN2O5,KN2O5,YCLNO2,so2,sulf
+-:h:0:no2,no,o3,hno3,h2o2,ald,hcho,op1,op2,paa
+-:h:0:ora1,ora2,nh3,n2o5,no3,pan,hc3,hc5,hc8,eth
+-:h:0:co,ol2,olt,oli,tol,xyl,aco3,tpan,hono,hno4
+-:h:0:ket,gly,mgly,dcb,onit,csl,iso,hcl,ho,ho2
+-:h:0:nh4aj,nh4ai,no3aj,no3ai,naaj,naai,claj,clai,orgaro1j,orgaro1i
+-:h:0:orgaro2j,orgaro2i,orgalk1j,orgalk1i,orgole1j,orgole1i,orgba1j,orgba1i,orgba2j,orgba2i
+-:h:0:orgba3j,orgba3i,orgba4j,orgba4i,orgpaj,orgpai,ecj,eci,p25j,p25i
+-:h:0:antha,seas,soila,nu0,ac0,corn,nh4cwj,nh4cwi,no3cwj,no3cwi
+-:h:0:nacwj,nacwi,clcwj,clcwi,orgaro1cwj,orgaro1cwi,orgaro2cwj,orgaro2cwi,orgalk1cwj,orgalk1cwi
+-:h:0:orgole1cwj,orgole1cwi,orgba1cwj,orgba1cwi,orgba2cwj,orgba2cwi,orgba3cwj,orgba3cwi,orgba4cwj,orgba4cwi
+-:h:0:orgpacwj,orgpacwi,eccwj,eccwi,p25cwj,p25cwi,soilcw
+
+# Stream 2: add 383 vars (Both + all Chem)
++:h:2:Times,XLAT,XLONG,XLAT_U,XLONG_U,XLAT_V,XLONG_V,XTIME,LU_INDEX,ZNU
++:h:2:ZNW,ZS,DZS,VAR_SSO,BATHYMETRY_FLAG,HGT,LANDMASK,LAKEMASK,U,V
++:h:2:W,PH,PHB,T,THM,MU,MUB,P,PB,P_HYD
++:h:2:PSFC,P_TOP,PCB,PC,NEST_POS,FNM,FNP,RDNW,RDN,DNW
++:h:2:DN,CFN,CFN1,CF1,CF2,CF3,C1H,C2H,C3H,C4H
++:h:2:C1F,C2F,C3F,C4F,RDX,RDY,AREA2D,DX2D,RESM,ZETATOP
++:h:2:T00,P00,TLP,TISO,TLP_STRAT,P_STRAT,MAX_MSFTX,MAX_MSFTY,ITIMESTEP,THIS_IS_AN_IDEAL_RUN
++:h:2:GOT_VAR_SSO,SAVE_TOPO_FROM_REAL,MAPFAC_M,MAPFAC_U,MAPFAC_V,MAPFAC_MX,MAPFAC_MY,MAPFAC_UX,MAPFAC_UY,MAPFAC_VX
++:h:2:MAPFAC_VY,MF_VX_INV,F,E,SINALPHA,COSALPHA,Q2,T2,TH2,U10
++:h:2:V10,U10E,V10E,TSK,SST,SST_INPUT,SSTSK,WATER_DEPTH,TMN,XLAND
++:h:2:UST,PBLH,HFX,QFX,LH,ACHFX,ACLHF,GRDFLX,ACGRDFLX,HFX_FORCE
++:h:2:LH_FORCE,TSK_FORCE,HFX_FORCE_TEND,LH_FORCE_TEND,TSK_FORCE_TEND,QVAPOR,QCLOUD,QRAIN,QICE,QSNOW
++:h:2:QGRAUP,QNICE,QNSNOW,QNRAIN,QNGRAUPEL,QNDROP,RAINC,RAINSH,RAINNC,SNOWNC
++:h:2:GRAUPELNC,HAILNC,ACSNOM,SR,TSLB,SMOIS,SH2O,SMCREL,SEAICE,XICEM
++:h:2:SFROFF,UDROFF,IVGTYP,ISLTYP,VEGFRA,SHDMAX,SHDMIN,SHDAVG,SNOALB,SNOW
++:h:2:SNOWH,SNOWC,CANWAT,COSZEN,LAI,ALBEDO,ALBBCK,EMISS,NOAHRES,CLAT
++:h:2:SWDOWN,GLW,SWNORM,OLR,ACSWUPT,ACSWUPTC,ACSWDNT,ACSWDNTC,ACSWUPB,ACSWUPBC
++:h:2:ACSWDNB,ACSWDNBC,ACLWUPT,ACLWUPTC,ACLWDNT,ACLWDNTC,ACLWUPB,ACLWUPBC,ACLWDNB,ACLWDNBC
++:h:2:SWUPT,SWUPTC,SWDNT,SWDNTC,SWUPB,SWUPBC,SWDNB,SWDNBC,LWUPT,LWUPTC
++:h:2:LWDNT,LWDNTC,LWUPB,LWUPBC,LWDNB,LWDNBC,SZA,GHI_ACCUM,CLRNIDX,O3_GFS_DU
++:h:2:CLDFRA,CLDFRAC2D,REFL_10CM,REFD_MAX,WVP,LWP,IWP,SWP,WP_SUM,LWP_TOT
++:h:2:IWP_TOT,WP_TOT_SUM,RE_QC,RE_QI,RE_QS,RE_QC_TOT,RE_QI_TOT,TAU_QC,TAU_QI,TAU_QS
++:h:2:TAU_QC_TOT,TAU_QI_TOT,CBASEHT,CTOPHT,CBASEHT_TOT,CTOPHT_TOT,TKE_PBL,ISEEDARR_SPPT,ISEEDARR_SKEBS,ISEEDARR_RAND_PERTURB
++:h:2:ISEEDARRAY_SPP_CONV,ISEEDARRAY_SPP_PBL,ISEEDARRAY_SPP_LSM,AOD_OUT,AOD2D_OUT,ATOP2D_OUT,EXTCOF55,CLDFRA2,RAINPROD,EVAPPROD
++:h:2:ICN_DIAG,NC_DIAG,E_NH3,EBIO_ISO,EBIO_API,ACTNH3,DRY_DEP_LEN,DRYDEPVEL,dvel_o3,UST_T
++:h:2:ROUGH_COR,SMOIS_COR,LAI_VEGMASK,DMS_0,PM2_5_DRY,PM10,PHOTR2,PHOTR4,SNU,SAC
++:h:2:PV,GAMN2O5,CN2O5,KN2O5,YCLNO2,so2,sulf,no2,no,o3
++:h:2:hno3,h2o2,ald,hcho,op1,op2,paa,ora1,ora2,nh3
++:h:2:n2o5,no3,pan,hc3,hc5,hc8,eth,co,ol2,olt
++:h:2:oli,tol,xyl,aco3,tpan,hono,hno4,ket,gly,mgly
++:h:2:dcb,onit,csl,iso,hcl,ho,ho2,so4aj,so4ai,nh4aj
++:h:2:nh4ai,no3aj,no3ai,naaj,naai,claj,clai,orgaro1j,orgaro1i,orgaro2j
++:h:2:orgaro2i,orgalk1j,orgalk1i,orgole1j,orgole1i,orgba1j,orgba1i,orgba2j,orgba2i,orgba3j
++:h:2:orgba3i,orgba4j,orgba4i,orgpaj,orgpai,ecj,eci,p25j,p25i,antha
++:h:2:seas,soila,nu0,ac0,corn,so4cwj,so4cwi,nh4cwj,nh4cwi,no3cwj
++:h:2:no3cwi,nacwj,nacwi,clcwj,clcwi,orgaro1cwj,orgaro1cwi,orgaro2cwj,orgaro2cwi,orgalk1cwj
++:h:2:orgalk1cwi,orgole1cwj,orgole1cwi,orgba1cwj,orgba1cwi,orgba2cwj,orgba2cwi,orgba3cwj,orgba3cwi,orgba4cwj
++:h:2:orgba4cwi,orgpacwj,orgpacwi,eccwj,eccwi,p25cwj,p25cwi,anthcw,seascw,soilcw
++:h:2:nu0cw,ac0cw,corncw
+

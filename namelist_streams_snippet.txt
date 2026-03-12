@@ -1,0 +1,27 @@
+&time_control
+ ! ---------------------------------------------------------------
+ ! Stream 0 (wrfout_d0*): every 10 minutes
+ !   Contains: all "Both" vars + 13 selected chemistry vars
+ !   (AOD_OUT, CLDFRA2, RAINPROD, NC_DIAG,
+ !    so4aj, so4ai, so4cwj, so4cwi,
+ !    anthcw, seascw, nu0cw, ac0cw, corncw)
+ ! ---------------------------------------------------------------
+ history_interval                    = 10,         ! minutes
+ frames_per_outfile                  = 1,
+
+ ! ---------------------------------------------------------------
+ ! Stream 2 (auxhist2_d0*): every 60 minutes
+ !   Contains: full WRF-Chem default output
+ !   (all "Both" + all "Chem" vars, 383 variables total)
+ ! ---------------------------------------------------------------
+ auxhist2_outname                    = "auxhist2_d<domain>_<date>",
+ auxhist2_interval                   = 60,         ! minutes
+ frames_per_auxhist2                 = 1,
+ io_form_auxhist2                    = 2,          ! NetCDF
+
+ ! ---------------------------------------------------------------
+ ! iofields: file that controls adding/removing vars per stream
+ ! ---------------------------------------------------------------
+ iofields_filename                   = "my_iofields.txt",
+ ignore_iofields_warning             = .true.,
+/
