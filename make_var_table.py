@@ -431,27 +431,62 @@ variables = [
     ("ac0cw",       "Time, bottom_top, south_north, west_east", "Accumulation mode number in cloud", "/kg-dryair","Chem"),
     ("corncw",      "Time, bottom_top, south_north, west_east", "Coarse mode number in cloud",       "/kg-dryair","Chem"),
     # ================================================================
-    # Additional variables that CAN be added to output (from code)
+    # Additional variables that CAN be added to output (from registry.chem)
+    # These have no 'h' flag in their I/O field — add via iofields_filename
     # ================================================================
-    ("dust_1",      "Time, bottom_top, south_north, west_east", "[OPTIONAL] Dust bin 1 (0.1-1 um) mixing ratio",     "ug/kg-dryair","Optional"),
-    ("dust_2",      "Time, bottom_top, south_north, west_east", "[OPTIONAL] Dust bin 2 (1-2.5 um) mixing ratio",     "ug/kg-dryair","Optional"),
-    ("dust_3",      "Time, bottom_top, south_north, west_east", "[OPTIONAL] Dust bin 3 (2.5-5 um) mixing ratio",     "ug/kg-dryair","Optional"),
-    ("dust_4",      "Time, bottom_top, south_north, west_east", "[OPTIONAL] Dust bin 4 (5-10 um) mixing ratio",      "ug/kg-dryair","Optional"),
-    ("dust_5",      "Time, bottom_top, south_north, west_east", "[OPTIONAL] Dust bin 5 (10-20 um) mixing ratio",     "ug/kg-dryair","Optional"),
-    ("DDVEL",       "Time, south_north, west_east",             "[OPTIONAL] Dry deposition velocity per species",    "cm/s",        "Optional"),
-    ("wetdep_1",    "Time, south_north, west_east",             "[OPTIONAL] Wet deposition flux species 1",          "mol/km2/hr",  "Optional"),
-    ("PHOTR",       "Time, bottom_top, south_north, west_east", "[OPTIONAL] Full photolysis rate table (all rates)", "min-1",       "Optional"),
-    ("ETOT",        "Time, south_north, west_east",             "[OPTIONAL] Total anthropogenic emission flux",       "mol km^-2 hr^-1","Optional"),
-    ("EBIO",        "Time, south_north, west_east",             "[OPTIONAL] Total biogenic emission flux",            "mol km^-2 hr^-1","Optional"),
-    ("RAINNCV",     "Time, south_north, west_east",             "[OPTIONAL] TIME-STEP NONCONVECTIVE PRECIPITATION (not in history by default)","mm","Optional"),
-    ("PREC_ACC_NC", "Time, south_north, west_east",             "[OPTIONAL] Accumulated precipitation over interval (requires PREC_ACC_DT)","mm","Optional"),
-    ("W_UP_MAX",    "Time, south_north, west_east",             "[OPTIONAL] Max updraft vertical velocity",          "m s-1",       "Optional"),
-    ("W_DN_MAX",    "Time, south_north, west_east",             "[OPTIONAL] Max downdraft vertical velocity",        "m s-1",       "Optional"),
-    ("CLDFRA_CONV", "Time, bottom_top, south_north, west_east", "[OPTIONAL] Convective cloud fraction",              "",            "Optional"),
-    ("ACHEMS_DRY",  "Time, south_north, west_east",             "[OPTIONAL] Accumulated dry deposition per species", "mol km^-2",   "Optional"),
-    ("ACHEMS_WET",  "Time, south_north, west_east",             "[OPTIONAL] Accumulated wet deposition per species", "mol km^-2",   "Optional"),
-    ("den",         "Time, bottom_top, south_north, west_east", "[OPTIONAL] Air density (computed, not output by default)","kg m^-3","Optional"),
-    ("alt",         "Time, bottom_top, south_north, west_east", "[OPTIONAL] Inverse density (specific volume)",      "m3 kg-1",     "Optional"),
+    # -- Dust emissions (accumulated, per bin) --
+    ("EDUST1",          "Time, south_north, west_east", "Accumulated dust emission bin 1 (0.1-1 um)",   "kg m-2",      "Optional"),
+    ("EDUST2",          "Time, south_north, west_east", "Accumulated dust emission bin 2 (1-2.5 um)",   "kg m-2",      "Optional"),
+    ("EDUST3",          "Time, south_north, west_east", "Accumulated dust emission bin 3 (2.5-5 um)",   "kg m-2",      "Optional"),
+    ("EDUST4",          "Time, south_north, west_east", "Accumulated dust emission bin 4 (5-10 um)",    "kg m-2",      "Optional"),
+    ("EDUST5",          "Time, south_north, west_east", "Accumulated dust emission bin 5 (10-20 um)",   "kg m-2",      "Optional"),
+    # -- Dust loading --
+    ("dustload_1",      "Time, south_north, west_east", "Dust column loading bin 1",                    "ug m-2",      "Optional"),
+    ("dustload_2",      "Time, south_north, west_east", "Dust column loading bin 2",                    "ug m-2",      "Optional"),
+    ("dustload_3",      "Time, south_north, west_east", "Dust column loading bin 3",                    "ug m-2",      "Optional"),
+    ("dustload_4",      "Time, south_north, west_east", "Dust column loading bin 4",                    "ug m-2",      "Optional"),
+    ("dustload_5",      "Time, south_north, west_east", "Dust column loading bin 5",                    "ug m-2",      "Optional"),
+    # -- Dust dry deposition (accumulated) --
+    ("dustdrydep_1",    "Time, south_north, west_east", "Accumulated dust dry deposition bin 1",        "kg m-2",      "Optional"),
+    ("dustdrydep_2",    "Time, south_north, west_east", "Accumulated dust dry deposition bin 2",        "kg m-2",      "Optional"),
+    ("dustdrydep_3",    "Time, south_north, west_east", "Accumulated dust dry deposition bin 3",        "kg m-2",      "Optional"),
+    ("dustdrydep_4",    "Time, south_north, west_east", "Accumulated dust dry deposition bin 4",        "kg m-2",      "Optional"),
+    ("dustdrydep_5",    "Time, south_north, west_east", "Accumulated dust dry deposition bin 5",        "kg m-2",      "Optional"),
+    # -- Dust wet deposition (accumulated) --
+    ("dustwdload_1",    "Time, south_north, west_east", "Dust load loss by wet deposition bin 1",       "ug m-2",      "Optional"),
+    ("dustwdload_2",    "Time, south_north, west_east", "Dust load loss by wet deposition bin 2",       "ug m-2",      "Optional"),
+    ("dustwdload_3",    "Time, south_north, west_east", "Dust load loss by wet deposition bin 3",       "ug m-2",      "Optional"),
+    ("dustwdload_4",    "Time, south_north, west_east", "Dust load loss by wet deposition bin 4",       "ug m-2",      "Optional"),
+    ("dustwdload_5",    "Time, south_north, west_east", "Dust load loss by wet deposition bin 5",       "ug m-2",      "Optional"),
+    # -- Aerosol optical properties at other wavelengths --
+    ("EXTCOF3",         "Time, bottom_top, south_north, west_east", "Extinction coefficient at 0.3 um", "km-1",        "Optional"),
+    ("EXTCOF106",       "Time, bottom_top, south_north, west_east", "Extinction coefficient at 1.06 um","km-1",        "Optional"),
+    ("EXTCOF3_5",       "Time, bottom_top, south_north, west_east", "Band-avg extinction 3-5 um",       "km-1",        "Optional"),
+    ("EXTCOF8_12",      "Time, bottom_top, south_north, west_east", "Band-avg extinction 8-12 um",      "km-1",        "Optional"),
+    ("BSCOF3",          "Time, bottom_top, south_north, west_east", "Backscatter coefficient at 0.3 um","km-1",        "Optional"),
+    ("BSCOF106",        "Time, bottom_top, south_north, west_east", "Backscatter coefficient at 1.06 um","km-1",       "Optional"),
+    ("ASYMPAR3",        "Time, bottom_top, south_north, west_east", "Asymmetry parameter at 0.3 um",    "",            "Optional"),
+    ("ASYMPAR55",       "Time, bottom_top, south_north, west_east", "Asymmetry parameter at 0.55 um",   "",            "Optional"),
+    ("ASYMPAR106",      "Time, bottom_top, south_north, west_east", "Asymmetry parameter at 1.06 um",   "",            "Optional"),
+    # -- PM composition (not in history by default) --
+    ("PM2_5_EC_DRY",    "Time, bottom_top, south_north, west_east", "PM2.5 elemental carbon dry mass",  "ug m-3",      "Optional"),
+    ("PM2_5_WATER",     "Time, bottom_top, south_north, west_east", "PM2.5 aerosol liquid water content","ug m-3",     "Optional"),
+    # -- Deposition fluxes (accumulated) --
+    ("ddflx",           "Time, south_north, west_east", "Dry deposition flux for chemical species",     "mol m-2 or ug m-2","Optional"),
+    ("wdflx",           "Time, south_north, west_east", "Column wet scavenging flux for species",       "mmol m-2 or ug m-2","Optional"),
+    # -- Biomass burning emissions --
+    ("ebu_pm25",        "Time, south_north, west_east", "PM2.5 from biomass burning",                   "ug m-2 s-1",  "Optional"),
+    ("ebu_pm10",        "Time, south_north, west_east", "PM10 from biomass burning",                    "ug m-2 s-1",  "Optional"),
+    ("ebu_bc",          "Time, south_north, west_east", "Black carbon from biomass burning",             "ug m-2 s-1",  "Optional"),
+    ("ebu_co",          "Time, south_north, west_east", "CO from biomass burning",                      "mol km-2 hr-1","Optional"),
+    # -- Tropopause diagnostics --
+    ("tropo_p",         "Time, south_north, west_east", "Tropopause pressure",                          "Pa",          "Optional"),
+    ("tropo_z",         "Time, south_north, west_east", "Tropopause height",                            "m",           "Optional"),
+    # -- Standard WRF variables not in history by default --
+    ("RAINNCV",         "Time, south_north, west_east", "TIME-STEP NONCONVECTIVE PRECIPITATION (restart only, not history)", "mm", "Optional"),
+    ("PREC_ACC_NC",     "Time, south_north, west_east", "Accumulated precip over interval (requires PREC_ACC_DT > 0 in namelist)", "mm", "Optional"),
+    ("den",             "Time, bottom_top, south_north, west_east", "Air density (computed internally, not output by default)", "kg m-3", "Optional"),
+    ("alt",             "Time, bottom_top, south_north, west_east", "Inverse density / specific volume (not output by default)", "m3 kg-1","Optional"),
 ]
 
 # Color map per source
