@@ -527,6 +527,47 @@ variables = [
     ("alt",             "Time, bottom_top, south_north, west_east", "Inverse density / specific volume (not output by default)", "m3 kg-1","Optional"),
 ]
 
+# ---- Variables diagnosed as all-zero in this simulation ----
+ALL_ZERO_VARS = {
+    "ACGRDFLX", "ACLWDNT", "ACLWDNTC", "ACSNOM", "BATHYMETRY_FLAG",
+    "CANWAT", "CON", "DTAUX3D", "DTAUY3D", "DUSFCG", "DVSFCG",
+    "GOT_VAR_SSO", "GRDFLX", "HAILNC", "HFX_FORCE", "HFX_FORCE_TEND",
+    "HGT", "ISEEDARRAY_SPP_CONV", "ISEEDARRAY_SPP_LSM", "ISEEDARRAY_SPP_PBL",
+    "ISEEDARR_RAND_PERTURB", "ISEEDARR_SKEBS", "ISEEDARR_SPPT",
+    "LAKEMASK", "LANDMASK", "LH_FORCE", "LH_FORCE_TEND", "LWDNT", "LWDNTC",
+    "MAX_MSFTX", "MAX_MSFTY", "NEST_POS", "NOAHRES", "O3_GFS_DU",
+    "OA1", "OA2", "OA3", "OA4", "OL1", "OL2", "OL3", "OL4",
+    "PC", "PCB", "P_STRAT", "RAINC", "RAINSH", "REFD_MAX", "RESM",
+    "RE_QC", "RE_QC_TOT", "RE_QI", "RE_QI_TOT", "RE_QS",
+    "SAVE_TOPO_FROM_REAL", "SEAICE", "SFROFF", "SHDAVG", "SHDMAX", "SHDMIN",
+    "SNOW", "SNOWC", "SNOWH", "SSTSK", "SST_INPUT", "SWNORM",
+    "TAU_QC", "TAU_QC_TOT", "TAU_QI", "TAU_QI_TOT", "TAU_QS",
+    "THIS_IS_AN_IDEAL_RUN", "TSK_FORCE", "TSK_FORCE_TEND",
+    "UDROFF", "VAR", "VAR_SSO", "VEGFRA", "XICEM", "ZETATOP",
+}
+
+# ---- Variables that do not change with time ----
+STATIC_VARS = {
+    "BATHYMETRY_FLAG", "C1F", "C1H", "C2F", "C2H", "C3F", "C3H", "C4F", "C4H",
+    "CF1", "CF2", "CF3", "CFN", "CFN1", "DN", "DNW", "DZS", "FNM", "FNP",
+    "GOT_VAR_SSO", "HFX_FORCE", "HFX_FORCE_TEND",
+    "ISEEDARRAY_SPP_CONV", "ISEEDARRAY_SPP_LSM", "ISEEDARRAY_SPP_PBL",
+    "ISEEDARR_RAND_PERTURB", "ISEEDARR_SKEBS", "ISEEDARR_SPPT",
+    "LH_FORCE", "LH_FORCE_TEND", "MAX_MSFTX", "MAX_MSFTY",
+    "P00", "P_STRAT", "P_TOP", "RDN", "RDNW", "RESM",
+    "SAVE_TOPO_FROM_REAL", "T00", "THIS_IS_AN_IDEAL_RUN", "TISO", "TLP",
+    "TLP_STRAT", "TSK_FORCE", "TSK_FORCE_TEND", "ZETATOP",
+    "ZNU", "ZNW", "ZS",
+}
+
+# Note colors: orange=all-zero, lavender=static, pink=both
+NOTE_COLORS = {
+    "allzero":  "FFCCB3",   # light orange
+    "static":   "DDD0FF",   # light lavender
+    "both":     "FFB3D9",   # light pink/magenta
+    "":         None,
+}
+
 # Color map per source
 SOURCE_COLORS = {
     "Both":     "FFFFFF",   # white
@@ -557,8 +598,8 @@ header_align = Alignment(horizontal="center", vertical="center", wrap_text=True)
 cell_align  = Alignment(horizontal="left",   vertical="center", wrap_text=True)
 center_align= Alignment(horizontal="center", vertical="center", wrap_text=True)
 
-headers   = ["#", "Variable Name", "Dimensions", "Description", "Units", "Source"]
-col_widths= [5,    22,              45,            60,            20,       12]
+headers   = ["#", "Variable Name", "Dimensions", "Description", "Units", "Source", "Notes"]
+col_widths= [5,    22,              45,            60,            20,       12,        18]
 
 for col, (h, w) in enumerate(zip(headers, col_widths), 1):
     cell = ws.cell(row=1, column=col, value=h)
@@ -579,37 +620,81 @@ source_label = {
 for row_idx, (name, dims, desc, units, src) in enumerate(variables, 2):
     fill_color = SOURCE_COLORS.get(src, "FFFFFF")
     fill = PatternFill("solid", fgColor=fill_color)
-    row_data = [row_idx-1, name, dims, desc, units, source_label[src]]
-    aligns   = [center_align, cell_align, cell_align, cell_align, center_align, center_align]
+
+    # Determine notes flag
+    is_zero   = name in ALL_ZERO_VARS
+    is_static = name in STATIC_VARS
+    if is_zero and is_static:
+        note_key  = "both"
+        note_text = "All zeros + Static"
+    elif is_zero:
+        note_key  = "allzero"
+        note_text = "All zeros"
+    elif is_static:
+        note_key  = "static"
+        note_text = "Static (no time change)"
+    else:
+        note_key  = ""
+        note_text = ""
+
+    row_data = [row_idx-1, name, dims, desc, units, source_label[src], note_text]
+    aligns   = [center_align, cell_align, cell_align, cell_align, center_align, center_align, center_align]
     for col, (val, aln) in enumerate(zip(row_data, aligns), 1):
         cell = ws.cell(row=row_idx, column=col, value=val)
-        cell.fill      = fill
+        # Notes column (col 7) gets its own highlight color; others use source color
+        if col == 7 and note_key:
+            cell.fill = PatternFill("solid", fgColor=NOTE_COLORS[note_key])
+            cell.font = Font(name="Calibri", size=10, bold=True)
+        else:
+            cell.fill = fill
+            cell.font = Font(name="Calibri", size=10)
         cell.alignment = aln
         cell.border    = border
-        cell.font      = Font(name="Calibri", size=10)
     ws.row_dimensions[row_idx].height = 18
 
 ws.freeze_panes = "A2"
-ws.auto_filter.ref = f"A1:F{len(variables)+1}"
+ws.auto_filter.ref = f"A1:G{len(variables)+1}"
 
 # ---- Legend sheet ----
 ls = wb.create_sheet("Legend")
-legend = [
-    ("Color",        "Source",        "Meaning"),
-    ("White",        "Both",          "Variable present in both standard WRF and WRF-Chem output"),
-    ("Light Blue",   "WRF only",      "Variable present in standard WRF output only"),
-    ("Light Green",  "WRF-Chem only", "Variable present in WRF-Chem output only"),
-    ("Light Yellow", "Can be added",  "Variable computed by WRF/WRF-Chem but NOT in history output by default; can be enabled via namelist or iofields_filename"),
+legend_rows = [
+    # (color_hex, label, meaning)
+    ("1F4E79", "Header",               ""),
+    ("FFFFFF", "Both",                 "Variable present in both standard WRF and WRF-Chem output"),
+    ("D6E4F0", "WRF only",             "Variable present in standard WRF output only"),
+    ("E2EFDA", "WRF-Chem only",        "Variable present in WRF-Chem output only"),
+    ("FFF2CC", "Can be added",         "Variable computed by WRF/WRF-Chem but NOT in history output by default"),
+    ("FFCCB3", "All zeros",            "Variable was confirmed all-zero in this simulation (Notes column)"),
+    ("DDD0FF", "Static",               "Variable does not change with time (Notes column)"),
+    ("FFB3D9", "All zeros + Static",   "Variable is both all-zero and static (Notes column)"),
 ]
-lcolors = ["1F4E79", "FFFFFF", "D6E4F0", "E2EFDA", "FFF2CC"]
-for r, (row, color) in enumerate(zip(legend, lcolors), 1):
-    for c, val in enumerate(row, 1):
-        cell = ls.cell(row=r, column=c, value=val)
-        cell.fill   = PatternFill("solid", fgColor=color)
-        cell.border = border
-        cell.font   = Font(name="Calibri", bold=(r==1), color="FFFFFF" if r==1 else "000000", size=11)
-        cell.alignment = Alignment(horizontal="center", vertical="center")
-        ls.column_dimensions[get_column_letter(c)].width = 20
+ls_headers = ["Row Color / Notes Color", "Label", "Meaning"]
+for c, h in enumerate(ls_headers, 1):
+    cell = ls.cell(row=1, column=c, value=h)
+    cell.fill      = PatternFill("solid", fgColor="1F4E79")
+    cell.font      = Font(name="Calibri", bold=True, color="FFFFFF", size=11)
+    cell.alignment = Alignment(horizontal="center", vertical="center")
+    cell.border    = border
+    ls.column_dimensions[get_column_letter(c)].width = 28
+ls.row_dimensions[1].height = 22
+
+for r, (color, label, meaning) in enumerate(legend_rows, 2):
+    cell_color = ls.cell(row=r, column=1, value=label)
+    cell_color.fill      = PatternFill("solid", fgColor=color)
+    cell_color.font      = Font(name="Calibri", bold=True,
+                                color="FFFFFF" if color == "1F4E79" else "000000", size=11)
+    cell_color.alignment = Alignment(horizontal="center", vertical="center")
+    cell_color.border    = border
+
+    cell_label = ls.cell(row=r, column=2, value=label)
+    cell_label.font      = Font(name="Calibri", size=11)
+    cell_label.alignment = Alignment(horizontal="center", vertical="center")
+    cell_label.border    = border
+
+    cell_meaning = ls.cell(row=r, column=3, value=meaning)
+    cell_meaning.font      = Font(name="Calibri", size=11)
+    cell_meaning.alignment = Alignment(horizontal="left", vertical="center", wrap_text=True)
+    cell_meaning.border    = border
     ls.row_dimensions[r].height = 22
 
 output_path = "/home/user/WRF/wrfout_variables.xlsx"
