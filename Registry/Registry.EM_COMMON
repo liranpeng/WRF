@@ -494,9 +494,9 @@ state    real   qnifa2d          ij     misc        1         -     i01{17}rhdu 
 state    real   qnbca2d          ij     misc        1         -     i01{17}rhdu "QNBCA2D"     "Surface black carbon number conc emission"  "kg-1 s-1"
 state    real   qnocbb2d         ij     misc        1         -     i01{17}rhdu "QNOCBB2D"    "Surface organic carbon biomass burning number conc emission"  "kg-1 s-1"
 state    real   qnbcbb2d         ij     misc        1         -     i01{17}rhdu "QNBCBB2D"    "Surface black carbon biomass burning number conc emission"  "kg-1 s-1"
-state    real   re_cloud         ikj    misc        1         -     r        "RE_CLOUD"       "Effective radius cloud water"  "m"
-state    real   re_ice           ikj    misc        1         -     r        "RE_ICE"         "Effective radius cloud ice"    "m"
-state    real   re_snow          ikj    misc        1         -     r        "RE_SNOW"        "Effective radius snow"         "m"
+state    real   re_cloud         ikj    misc        1         -     rh       "RE_CLOUD"       "Effective radius cloud water"  "m"
+state    real   re_ice           ikj    misc        1         -     rh       "RE_ICE"         "Effective radius cloud ice"    "m"
+state    real   re_snow          ikj    misc        1         -     rh       "RE_SNOW"        "Effective radius snow"         "m"
 state    real   re_cloud_gsfc    ikj    misc        1         -     rh       "RE_CLOUD_GSFC"  "Cloud Water effective radius"      "micron"
 state    real   re_rain_gsfc     ikj    misc        1         -     rh       "RE_RAIN_GSFC"   "Rain Water effective radius"       "micron"
 state    real   re_ice_gsfc      ikj    misc        1         -     rh       "RE_ICE_GSFC"    "Cloud Ice effective radius"        "micron"
@@ -3024,7 +3024,7 @@ package   wsm6rscheme     mp_physics==106              -             moist:qv,qc
 package   nuwrf4icescheme mp_physics==7              -               moist:qv,qc,qr,qi,qs,qg,qh;state:phys_tot,physc,physe,physd,physs,physm,physf,acphys_tot,acphysc,acphyse,acphysd,acphyss,acphysm,acphysf,preci3d,precs3d,precg3d,precr3d,prech3d,re_cloud_gsfc,re_rain_gsfc,re_ice_gsfc,re_snow_gsfc,re_graupel_gsfc,re_hail_gsfc,re_cloud,re_ice,re_snow
 package   thompson        mp_physics==8                -             moist:qv,qc,qr,qi,qs,qg;scalar:qni,qnr;state:re_cloud,re_ice,re_snow
 package   milbrandt2mom   mp_physics==9                -             moist:qv,qc,qr,qi,qs,qg,qh;scalar:qnc,qnr,qni,qns,qng,qnh
-package   morr_two_moment mp_physics==10               -             moist:qv,qc,qr,qi,qs,qg;scalar:qni,qns,qnr,qng;state:rqrcuten,rqscuten,rqicuten
+package   morr_two_moment mp_physics==10               -             moist:qv,qc,qr,qi,qs,qg;scalar:qni,qns,qnr,qng;state:rqrcuten,rqscuten,rqicuten,re_cloud,re_ice,re_snow
 package   cammgmpscheme   mp_physics==11               -             moist:qv,qc,qi,qr,qs;scalar:qnc,qni,qnr,qns;state:rh_old_mp,lcd_old_mp,cldfra_old_mp,rhml,cldfra_mp,cldfra_mp_all,cldfra_conv,cldfrai,cldfral,turbtype3d,smaw3d,wsedl3d,icwmrdp3d,dp3d,shfrc3d,dlf,dlf2,tke_pbl,lradius,iradius
 #package   milbrandt3mom  mp_physics==12               -             moist:qv,qc,qr,qi,qs,qg,qh;scalar:qnc,qnr,qni,qns,qng,qnh,qzr,qzi,qzs,qzg,qzh
 package   sbu_ylinscheme  mp_physics==13               -             moist:qv,qc,qr,qi,qs;state:rimi
