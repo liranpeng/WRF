@@ -1495,7 +1495,7 @@ REAL, DIMENSION( ims:ime, kms:kme, jms:jme ),                        &
         ENDIF
 
     CASE (MORR_TWO_MOMENT)
-         CALL wrf_debug(100, 'microphysics_driver: calling morrison two moment')
+         CALL wrf_debug(100, 'microphysics_driverLiran88: calling morrison two moment')
          IF (PRESENT (QV_CURR) .AND. PRESENT (QC_CURR) .AND. &
              PRESENT (QR_CURR) .AND. PRESENT (QI_CURR) .AND. &
          PRESENT (QS_CURR) .AND. PRESENT (QG_CURR) .AND. &
@@ -1550,6 +1550,7 @@ REAL, DIMENSION( ims:ime, kms:kme, jms:jme ),                        &
                  ,EVAPPROD=evapprod,RAINPROD=rainprod          &
 #endif
                  ,PRECR=precr,PRECI=preci,PRECS=precs,PRECG=precg   & ! jdf for wrf-chem
+                 ,RE_CLOUD=re_cloud                               & ! LP: effective radius for RRTMG
                                                                     )
         ELSE
            Call wrf_error_fatal( 'arguments not present for calling morrison two moment')
@@ -1757,7 +1758,7 @@ REAL, DIMENSION( ims:ime, kms:kme, jms:jme ),                        &
 
 # if (EM_CORE == 1)
     CASE (MORR_TM_AERO)
-         CALL wrf_debug(100, 'microphysics_driver: calling morrison two moment')
+         CALL wrf_debug(100, 'microphysics_driver Liran: calling morrison two moment')
          CALL mp_morr_two_moment_aero(                            &
                      ITIMESTEP=itimestep,                &  !*
                      TH=th,                              &  !*
@@ -1830,7 +1831,7 @@ REAL, DIMENSION( ims:ime, kms:kme, jms:jme ),                        &
 #endif
 
     CASE (MILBRANDT2MOM)
-         CALL wrf_debug(100, 'microphysics_driver: calling milbrandt2mom')
+         CALL wrf_debug(100, 'microphysics_driver Liran: calling milbrandt2mom')
          IF (PRESENT (QV_CURR) .AND.                           &
              PRESENT (QC_CURR) .AND. PRESENT (QNC_CURR)  .AND. &
              PRESENT (QR_CURR) .AND. PRESENT (QNR_CURR)  .AND. &

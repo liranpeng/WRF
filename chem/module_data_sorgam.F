@@ -738,15 +738,15 @@ MODULE module_data_sorgam
 
 !  initial mean diameter for nuclei mode [ m ]    
       REAL dginin
-      PARAMETER (dginin=0.01E-6)
+      PARAMETER (dginin=0.04E-6)
 
 !  initial mean diameter for accumulation mode [ m ]
       REAL dginia
-      PARAMETER (dginia=0.07E-6)
+      PARAMETER (dginia=0.16E-6)
 
 ! initial mean diameter for coarse mode [ m ]  
       REAL dginic
-      PARAMETER (dginic=1.0E-6)
+      PARAMETER (dginic=1.2E-6)
 
 
 

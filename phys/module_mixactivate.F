@@ -20,84 +20,84 @@ CONTAINS
 ! 06-nov-2005 rce - grid_id & ktau added to arg list
 ! 25-apr-2006 rce - dens_aer is (g/cm3), NOT (kg/m3)
       subroutine prescribe_aerosol_mixactivate (                      &
-        grid_id, ktau, dtstep, naer,                          &
-        ccn_conc, chem_opt,                                   & ! RAS
-        rho_phy, th_phy, pre, pi_phy, w, cldfra, rh_ml, rqvblten,rqvshten,rqvcuten, cldfra_old,       &
-        z, dz8w, p_at_w, t_at_w, exch_h,                      &
+		grid_id, ktau, dtstep, naer,                          &
+		ccn_conc, chem_opt,                                   & ! RAS
+		rho_phy, th_phy, pre, pi_phy, w, cldfra, rh_ml, rqvblten,rqvshten,rqvcuten, cldfra_old,       &
+		z, dz8w, p_at_w, t_at_w, exch_h,                      &
         qv, qc, qi, qndrop3d,                                &
         nsource,                                              &
-        ids,ide, jds,jde, kds,kde,                            &
-        ims,ime, jms,jme, kms,kme,                            &
-        its,ite, jts,jte, kts,kte,                            &
-        f_qc, f_qi, cn                                        )
+		ids,ide, jds,jde, kds,kde,                            &
+		ims,ime, jms,jme, kms,kme,                            &
+		its,ite, jts,jte, kts,kte,                            &
+		f_qc, f_qi, cn                                        )
 
 !        USE module_configure
 
 ! wrapper to call mixactivate for mosaic description of aerosol
 
-    implicit none
+	implicit none
 
 !   subr arguments
-    integer, intent(in) ::                  &
-        grid_id, ktau,                  &
-        ids, ide, jds, jde, kds, kde,   &
-        ims, ime, jms, jme, kms, kme,   &
-        its, ite, jts, jte, kts, kte
+	integer, intent(in) ::                  &
+		grid_id, ktau,                  &
+		ids, ide, jds, jde, kds, kde,   &
+		ims, ime, jms, jme, kms, kme,   &
+		its, ite, jts, jte, kts, kte
 
-    real, intent(in) :: dtstep
-    real, intent(inout) :: naer ! aerosol number (/kg)
+	real, intent(in) :: dtstep
+	real, intent(inout) :: naer ! aerosol number (/kg)
         real, intent(in) :: ccn_conc ! CCN conc set within namelist
         integer, optional, intent(in) :: chem_opt
 
-    real, intent(in),   &
-        dimension( ims:ime, kms:kme, jms:jme ) :: &
-        rho_phy, th_phy, pre, pi_phy, w,  &
-        z, dz8w, p_at_w, t_at_w, exch_h
+	real, intent(in),   &
+		dimension( ims:ime, kms:kme, jms:jme ) :: &
+		rho_phy, th_phy, pre, pi_phy, w,  &
+		z, dz8w, p_at_w, t_at_w, exch_h
 
-    real, intent(inout),   &
-        dimension( ims:ime, kms:kme, jms:jme ) :: cldfra, rh_ml, rqvblten,rqvshten,rqvcuten, cldfra_old
+	real, intent(inout),   &
+		dimension( ims:ime, kms:kme, jms:jme ) :: cldfra, rh_ml, rqvblten,rqvshten,rqvcuten, cldfra_old
 
-    real, intent(in),   &
-        dimension( ims:ime, kms:kme, jms:jme ) :: &
-        qv, qc, qi
+	real, intent(in),   &
+		dimension( ims:ime, kms:kme, jms:jme ) :: &
+		qv, qc, qi
 
-    real, intent(inout), optional,  &
-        dimension( ims:ime, kms:kme, jms:jme ) :: &
-        cn ! single-size CCN concentration
+	real, intent(inout), optional,  &
+		dimension( ims:ime, kms:kme, jms:jme ) :: &
+		cn ! single-size CCN concentration
 
-    real, intent(inout),   &
-        dimension( ims:ime, kms:kme, jms:jme ) :: &
-        qndrop3d
+	real, intent(inout),   &
+		dimension( ims:ime, kms:kme, jms:jme ) :: &
+		qndrop3d
 
-    real, intent(out),   &
-        dimension( ims:ime, kms:kme, jms:jme) :: nsource
+	real, intent(out),   &
+		dimension( ims:ime, kms:kme, jms:jme) :: nsource
 
     LOGICAL, OPTIONAL :: f_qc, f_qi
 
 ! local vars
-    integer maxd_aphase, maxd_atype, maxd_asize, maxd_acomp, max_chem
-    parameter (maxd_aphase=2,maxd_atype=1,maxd_asize=1,maxd_acomp=1, max_chem=10)
-    real ddvel(its:ite, jts:jte, max_chem) ! dry deposition velosity
-    real qsrflx(ims:ime, jms:jme, max_chem) ! dry deposition flux of aerosol
-    real chem(ims:ime, kms:kme, jms:jme, max_chem) ! chem array
-    integer i,j,k,l,m,n,p
-    real hygro( its:ite, kts:kte, jts:jte, maxd_asize, maxd_atype ) ! bulk
-    integer ntype_aer, nsize_aer(maxd_atype),ncomp_aer(maxd_atype), nphase_aer
-        integer massptr_aer( maxd_acomp, maxd_asize, maxd_atype, maxd_aphase ),   &
-          waterptr_aer( maxd_asize, maxd_atype ),   &
-          numptr_aer( maxd_asize, maxd_atype, maxd_aphase ), &
-      ai_phase, cw_phase
+	integer maxd_aphase, maxd_atype, maxd_asize, maxd_acomp, max_chem
+	parameter (maxd_aphase=2,maxd_atype=1,maxd_asize=1,maxd_acomp=1, max_chem=10)
+	real ddvel(its:ite, jts:jte, max_chem) ! dry deposition velosity
+	real qsrflx(ims:ime, jms:jme, max_chem) ! dry deposition flux of aerosol
+	real chem(ims:ime, kms:kme, jms:jme, max_chem) ! chem array
+	integer i,j,k,l,m,n,p
+	real hygro( its:ite, kts:kte, jts:jte, maxd_asize, maxd_atype ) ! bulk
+	integer ntype_aer, nsize_aer(maxd_atype),ncomp_aer(maxd_atype), nphase_aer
+      	integer massptr_aer( maxd_acomp, maxd_asize, maxd_atype, maxd_aphase ),   &
+      	  waterptr_aer( maxd_asize, maxd_atype ),   &
+      	  numptr_aer( maxd_asize, maxd_atype, maxd_aphase ), &
+	  ai_phase, cw_phase
         real dlo_sect( maxd_asize, maxd_atype ),   & ! minimum size of section (cm)
              dhi_sect( maxd_asize, maxd_atype ),   & ! maximum size of section (cm)
-         sigmag_aer(maxd_asize, maxd_atype),   & ! geometric standard deviation of aerosol size dist
-         dgnum_aer(maxd_asize, maxd_atype),    & ! median diameter (cm) of number distrib of mode
-         dens_aer( maxd_acomp, maxd_atype),    & ! density (g/cm3) of material
-         mw_aer( maxd_acomp, maxd_atype),      & ! molecular weight (g/mole)
-         dpvolmean_aer(maxd_asize, maxd_atype)   ! mean-volume diameter (cm) of mode
+	     sigmag_aer(maxd_asize, maxd_atype),   & ! geometric standard deviation of aerosol size dist
+	     dgnum_aer(maxd_asize, maxd_atype),    & ! median diameter (cm) of number distrib of mode
+	     dens_aer( maxd_acomp, maxd_atype),    & ! density (g/cm3) of material
+	     mw_aer( maxd_acomp, maxd_atype),      & ! molecular weight (g/mole)
+	     dpvolmean_aer(maxd_asize, maxd_atype)   ! mean-volume diameter (cm) of mode
 ! terminology:  (pi/6) * (mean-volume diameter)**3 ==
 !       (volume mixing ratio of section/mode)/(number mixing ratio)
-    real, dimension(ims:ime,kms:kme,jms:jme) :: &
-         ccn1,ccn2,ccn3,ccn4,ccn5,ccn6,&
+	real, dimension(ims:ime,kms:kme,jms:jme) :: &
+	     ccn1,ccn2,ccn3,ccn4,ccn5,ccn6,&
            fn11,fn12,fn13,fn14,fn21,fn22,fn23,fn24,&
            fn31,fn32,fn33,fn34,fn41,fn42,fn43,fn44,&
            na11,na12,na13,na14,na21,na22,na23,na24,&
@@ -112,31 +112,31 @@ CONTAINS
            sg31,sg32,sg33,sg34,sg41,sg42,sg43,sg44,&
            hg11,hg12,hg13,hg14,hg21,hg22,hg23,hg24,&
            hg31,hg32,hg33,hg34,hg41,hg42,hg43,hg44
-    integer idrydep_onoff
-    real, dimension(ims:ime,kms:kme,jms:jme) :: t_phy
-    integer msectional
+	integer idrydep_onoff
+	real, dimension(ims:ime,kms:kme,jms:jme) :: t_phy
+	integer msectional
 
 
-      integer ptr
-      real maer
+	  integer ptr
+	  real maer
 
 !      if(naer.lt.1.)then
-!        naer=1000.e6 ! #/kg default value
+!	     naer=1000.e6 ! #/kg default value
 !      endif
       IF ( (naer.lt.1.) .OR. ( PRESENT(chem_opt) .AND. (chem_opt.eq.401))) THEN
              naer = ccn_conc !CCN value set in namelist
       ENDIF
-      ai_phase=1
-      cw_phase=2
-      idrydep_onoff = 0
-      msectional = 0
+	  ai_phase=1
+	  cw_phase=2
+	  idrydep_onoff = 0
+	  msectional = 0
 
-      t_phy(its:ite,kts:kte,jts:jte)=th_phy(its:ite,kts:kte,jts:jte)*pi_phy(its:ite,kts:kte,jts:jte)
+	  t_phy(its:ite,kts:kte,jts:jte)=th_phy(its:ite,kts:kte,jts:jte)*pi_phy(its:ite,kts:kte,jts:jte)
 
       ntype_aer=maxd_atype
       do n=1,ntype_aer
          nsize_aer(n)=maxd_asize
-     ncomp_aer(n)=maxd_acomp
+	 ncomp_aer(n)=maxd_acomp
       end do
       nphase_aer=maxd_aphase
 
@@ -145,14 +145,14 @@ CONTAINS
        do m=1,nsize_aer(n)
           dlo_sect( m,n )=0.01e-4    ! minimum size of section (cm)
           dhi_sect( m,n )=0.5e-4    ! maximum size of section (cm)
-      sigmag_aer(m,n)=2.      ! geometric standard deviation of aerosol size dist
-      dgnum_aer(m,n)=0.1e-4       ! median diameter (cm) of number distrib of mode
-      dpvolmean_aer(m,n) = dgnum_aer(m,n) * exp( 1.5 * (log(sigmag_aer(m,n)))**2 )
-      end do
-      do l=1,ncomp_aer(n)
-         dens_aer( l, n)=1.0   ! density (g/cm3) of material
-         mw_aer( l, n)=132. ! molecular weight (g/mole)
-      end do
+	  sigmag_aer(m,n)=2.      ! geometric standard deviation of aerosol size dist
+	  dgnum_aer(m,n)=0.1e-4       ! median diameter (cm) of number distrib of mode
+	  dpvolmean_aer(m,n) = dgnum_aer(m,n) * exp( 1.5 * (log(sigmag_aer(m,n)))**2 )
+	  end do
+	  do l=1,ncomp_aer(n)
+	     dens_aer( l, n)=1.0   ! density (g/cm3) of material
+	     mw_aer( l, n)=132. ! molecular weight (g/mole)
+	  end do
       end do
        ptr=0
        do p=1,nphase_aer
@@ -176,16 +176,16 @@ CONTAINS
        do p=1,maxd_aphase
        do n=1,ntype_aer
        do m=1,nsize_aer(n)
-      do l=1,ncomp_aer(n)
+	  do l=1,ncomp_aer(n)
           ptr=ptr+1
-         if(ptr.gt.max_chem)then
-            write(6,*)'ptr,max_chem=',ptr,max_chem,' in prescribe_aerosol_mixactivate'
-            call wrf_error_fatal("1")
-         endif
-         massptr_aer(l, m, n, p)=ptr
+	     if(ptr.gt.max_chem)then
+	        write(6,*)'ptr,max_chem=',ptr,max_chem,' in prescribe_aerosol_mixactivate'
+	        call wrf_error_fatal("1")
+	     endif
+	     massptr_aer(l, m, n, p)=ptr
 ! maer is ug/kg-air;  naer is #/kg-air;  dgnum is cm;  dens_aer is g/cm3
 ! 1.e6 factor converts g to ug
-         maer= 1.0e6 * naer * dens_aer(l,n) * ( (3.1416/6.) *   &
+	     maer= 1.0e6 * naer * dens_aer(l,n) * ( (3.1416/6.) *   &
                  (dgnum_aer(m,n)**3) * exp( 4.5*((log(sigmag_aer(m,n)))**2) ) )
            if(p.eq.ai_phase)then
             IF ( present( cn ) ) THEN
@@ -199,21 +199,21 @@ CONTAINS
               chem(its:ite,kts:kte,jts:jte,ptr)=0.
            endif
         end do
-    end do ! size
-    end do ! type
-    end do ! phase
+	end do ! size
+	end do ! type
+	end do ! phase
        do n=1,ntype_aer
        do m=1,nsize_aer(n)
           ptr=ptr+1
-      if(ptr.gt.max_chem)then
-         write(6,*)'ptr,max_chem=',ptr,max_chem,' in prescribe_aerosol_mixactivate'
-         call wrf_error_fatal("1")
-      endif
-!wig      waterptr_aer(m, n)=ptr
-      waterptr_aer(m, n)=-1
-    end do ! size
-    end do ! type
-    ddvel(its:ite,jts:jte,:)=0.
+	  if(ptr.gt.max_chem)then
+	     write(6,*)'ptr,max_chem=',ptr,max_chem,' in prescribe_aerosol_mixactivate'
+	     call wrf_error_fatal("1")
+	  endif
+!wig	  waterptr_aer(m, n)=ptr
+	  waterptr_aer(m, n)=-1
+	end do ! size
+	end do ! type
+	ddvel(its:ite,jts:jte,:)=0.
     hygro(its:ite,kts:kte,jts:jte,:,:) = 0.5
 
 ! 06-nov-2005 rce - grid_id & ktau added to arg list
@@ -573,15 +573,15 @@ OVERALL_MAIN_I_LOOP: do i=its,ite
 ! initialization for current i .........................................
 
      do k=kts+1,kte
-        zs(k)=1./(zm(i,k,j)-zm(i,k-1,j))
-     enddo
-     zs(kts)=zs(kts+1)
+	    zs(k)=1./(zm(i,k,j)-zm(i,k-1,j))
+	 enddo
+	 zs(kts)=zs(kts+1)
      zs(kte+1)=0.
 
      do k=kts,kte
-!!$     if(qndrop3d(i,k,j).lt.-10.e6.or.qndrop3d(i,k,j).gt.1.E20)then
-!!$!           call wrf_error_fatal("1")
-!!$     endif
+!!$	    if(qndrop3d(i,k,j).lt.-10.e6.or.qndrop3d(i,k,j).gt.1.E20)then
+!!$!	       call wrf_error_fatal("1")
+!!$	    endif
         if(f_qi)then
            qcld=qc(i,k,j)+qi(i,k,j)
         else
@@ -599,7 +599,7 @@ OVERALL_MAIN_I_LOOP: do i=its,ite
            lcldfra_old(k)=0.
         endif
         qndrop(k)=qndrop3d(i,k,j)
-!       qndrop(k)=1.e5
+!	    qndrop(k)=1.e5
         cs(k)=rho(i,k,j) ! air density (kg/m3)
         dz(k)=dz8w(i,k,j)
         do n=1,ntype_aer
@@ -1081,6 +1081,7 @@ OLD_CLOUD_MAIN_K_LOOP: do k=kts,kte
                                        dh11(i,k,j)=dhi_sect(m,n)
                                        sg11(i,k,j)=sigmag_aer(m,n)
                                        hg11(i,k,j)=hygro_aer(m,n)
+                                       fn13(i,k,j)=fn_ARG(m,n)
                               endif
                               if ((abs(m - 1.0) < eps) .and. (abs(n - 2.0) < eps)) then
                                        fn12(i,k,j)=fn(m,n)
@@ -1090,6 +1091,7 @@ OLD_CLOUD_MAIN_K_LOOP: do k=kts,kte
                                        dh12(i,k,j)=dhi_sect(m,n)
                                        sg12(i,k,j)=sigmag_aer(m,n)
                                        hg12(i,k,j)=hygro_aer(m,n)
+                                       fn14(i,k,j)=fn_ARG(m,n)
                               endif
                               if ((abs(m - 1.0) < eps) .and. (abs(n - 3.0) < eps)) then
                                        fn13(i,k,j)=fn_ARG(1,1)
@@ -1117,6 +1119,7 @@ OLD_CLOUD_MAIN_K_LOOP: do k=kts,kte
                                        dh21(i,k,j)=dhi_sect(m,n)
                                        sg21(i,k,j)=sigmag_aer(m,n)
                                        hg21(i,k,j)=hygro_aer(m,n)
+                                       fn23(i,k,j)=fn_ARG(m,n)
                               endif
                               if ((abs(m - 2.0) < eps) .and. (abs(n - 2.0) < eps)) then
                                        fn22(i,k,j)=fn(m,n)
@@ -1126,6 +1129,7 @@ OLD_CLOUD_MAIN_K_LOOP: do k=kts,kte
                                        dh22(i,k,j)=dhi_sect(m,n)
                                        sg22(i,k,j)=sigmag_aer(m,n)
                                        hg22(i,k,j)=hygro_aer(m,n)
+                                       fn24(i,k,j)=fn_ARG(m,n)
                               endif
                               if ((abs(m - 2.0) < eps) .and. (abs(n - 3.0) < eps)) then
                                        fn23(i,k,j)=fn_ARG(2,1)
@@ -3179,7 +3183,7 @@ OLD_CLOUD_NSUBMIX_LOOP: do nsub=1,nsubmix
       integer, parameter :: out_dim = 4
       integer :: dev_idx
       ! Host arrays (match real32 API; keep contiguous/target)
-      real(real32), allocatable :: input_array(:,:), output_array(:,:)
+      real(real32), allocatable, target :: input_array(:,:), output_array(:,:)
       real(real32) :: tmp_swap
       ! Misc
       integer :: idx
@@ -4349,7 +4353,7 @@ output_array = 0.0_real32
          CALL wrf_debug(15, TRIM(msg))
 
          dev_idx   = int(0, kind=c_int)
-         ! Input/Output tensor from host buffer (CPU) 
+         ! Input/Output tensor from host buffer (CPU)
          call torch_tensor_from_array_real32_2d_default_layout( &
             tin,  input_array,  torch_kCPU, requires_grad=.false. )
 
@@ -4358,7 +4362,6 @@ output_array = 0.0_real32
          in_t(1)  = tin
          WRITE(msg,*) 'tin shape = ', in_shape(1), ' x ', in_shape(2)
          CALL wrf_debug(15, TRIM(msg))
-         ! e.g., a couple of input features
          WRITE(msg,*) 'input_array(1,1)=tair (K)=', input_array(1,1)
          CALL wrf_debug(15, TRIM(msg))
          WRITE(msg,*) 'input_array(2,1)=pressure (hPa)=', input_array(2,1)
