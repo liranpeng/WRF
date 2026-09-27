@@ -122,7 +122,7 @@ else
   if ( ! $?WRF_COAMPS_CORE ) setenv WRF_COAMPS_CORE 0
   if ( ! $?WRF_EXP_CORE )    setenv WRF_EXP_CORE 0
   if ( ! $?WRF_PLUS_CORE )   setenv WRF_PLUS_CORE 0
-  if ( ! $?WRF_CHEM )        setenv WRF_CHEM 0
+  if ( ! $?WRF_CHEM )        setenv WRF_CHEM 1
   if ( ! $?WRF_DFI_RADAR )   setenv WRF_DFI_RADAR 0
   if ( ! $?WRF_CONVERT ) then
      if ( "$arglist" == "convert_em" ) then

@@ -14,7 +14,22 @@ CONTAINS
     subroutine dry_dep_driver(id,curr_secs,ktau,dtstep,config_flags,      &
                gmt,julday,t_phy,moist,scalar,p8w,t8w,w,alt,               &
                p_phy,chem,tracer,rho_phy,dz8w,rh,exch_h,hfx,dx,           &  
-               cldfra, cldfra_old,raincv,seasin,dustin,                   &
+               cldfra,rh_ml,rqvblten,rqvshten,rqvcuten,cldfra_old,raincv,seasin,dustin,&
+               fn11,fn12,fn13,fn14,fn21,fn22,fn23,fn24,&
+               fn31,fn32,fn33,fn34,fn41,fn42,fn43,fn44,&
+               na11,na12,na13,na14,na21,na22,na23,na24,&
+               na31,na32,na33,na34,na41,na42,na43,na44,&
+               vo11,vo12,vo13,vo14,vo21,vo22,vo23,vo24,&
+               vo31,vo32,vo33,vo34,vo41,vo42,vo43,vo44,&
+               dl11,dl12,dl13,dl14,dl21,dl22,dl23,dl24,&
+               dl31,dl32,dl33,dl34,dl41,dl42,dl43,dl44,&
+               dh11,dh12,dh13,dh14,dh21,dh22,dh23,dh24,&
+               dh31,dh32,dh33,dh34,dh41,dh42,dh43,dh44,&
+               sg11,sg12,sg13,sg14,sg21,sg22,sg23,sg24,&
+               sg31,sg32,sg33,sg34,sg41,sg42,sg43,sg44,&
+               hg11,hg12,hg13,hg14,hg21,hg22,hg23,hg24,&
+               hg31,hg32,hg33,hg34,hg41,hg42,hg43,hg44,&
+               emtair,empres,emrh,emwbar,&
                ccn1, ccn2, ccn3, ccn4, ccn5, ccn6, nsource,               &
                ivgtyp,tsk,gsw,vegfra,pbl,rmol,ust,znt,xlat,xlong,z,z_at_w,&
                xland,ash_fall,h2oaj,h2oai,nu3,ac3,cor3,asulf,ahno3,       &
@@ -130,7 +145,7 @@ CONTAINS
                                           xland,znt,raincv,ash_fall
    REAL,  DIMENSION( ims:ime , kms:kme , jms:jme )         ,        &
           INTENT(INOUT ) ::                                     &
-                    cldfra,     & ! cloud fraction current timestep
+                    cldfra,rh_ml,rqvblten,rqvshten,rqvcuten,     & ! cloud fraction current timestep and RH for ML
                     cldfra_old    ! cloud fraction previous timestep
    REAL,  DIMENSION( ims:ime , jms:jme, 5 )                   ,    &
           INTENT(IN) ::            seasin,dustin 
@@ -144,7 +159,21 @@ CONTAINS
 
    REAL, INTENT(OUT), dimension(ims:ime,kms:kme,jms:jme) :: nsource, &
 	     ccn1,ccn2,ccn3,ccn4,ccn5,ccn6  ! number conc of aerosols activated at supersat
-
+   REAL, INTENT(OUT), dimension(ims:ime,kms:kme,jms:jme) :: fn11,fn12,fn13,fn14,fn21,fn22,fn23,fn24,&
+           fn31,fn32,fn33,fn34,fn41,fn42,fn43,fn44,&
+           na11,na12,na13,na14,na21,na22,na23,na24,&
+           na31,na32,na33,na34,na41,na42,na43,na44,&
+           vo11,vo12,vo13,vo14,vo21,vo22,vo23,vo24,&
+           vo31,vo32,vo33,vo34,vo41,vo42,vo43,vo44,&
+           dl11,dl12,dl13,dl14,dl21,dl22,dl23,dl24,&
+           dl31,dl32,dl33,dl34,dl41,dl42,dl43,dl44,&
+           dh11,dh12,dh13,dh14,dh21,dh22,dh23,dh24,&
+           dh31,dh32,dh33,dh34,dh41,dh42,dh43,dh44,&
+           sg11,sg12,sg13,sg14,sg21,sg22,sg23,sg24,&
+           sg31,sg32,sg33,sg34,sg41,sg42,sg43,sg44,&
+           hg11,hg12,hg13,hg14,hg21,hg22,hg23,hg24,&
+           hg31,hg32,hg33,hg34,hg41,hg42,hg43,hg44
+   REAL, INTENT(OUT), dimension(ims:ime,kms:kme,jms:jme) :: emtair,empres,emrh,emwbar
       REAL,      INTENT(IN   ) ::                               &
                              dtstep,gmt,dx
 
@@ -1068,30 +1097,59 @@ CONTAINS
    end where
 
   qsrflx(:,:,:) = 0.0
-
+  emtair(:,:,:) = 0.0; empres(:,:,:) = 0.0; emrh(:,:,:) = 0.0; emwbar(:,:,:) = 0.0
+  CALL wrf_debug(15,'Liran test aerosol')
    mixactivate_select: SELECT CASE(config_flags%chem_opt)
-
    CASE (RADM2SORG_AQ, RADM2SORG_AQCHEM, RACMSORG_AQ, RACMSORG_AQCHEM_KPP, RACM_ESRLSORG_AQCHEM_KPP, CBMZSORG_AQ, &
          CB05_SORG_AQ_KPP)
-      CALL wrf_debug(15,'call mixactivate for sorgam aerosol')
+      CALL wrf_debug(15,'call mixactivate for LR sorgam aerosol')
       call sorgam_mixactivate (                        &
 		id, ktau, dtstep, config_flags, idrydep_onoff,   &
-		dryrho_phy, t_phy, w, cldfra, cldfra_old, &
+		dryrho_phy, t_phy, p_phy, w, cldfra, rh_ml,rqvblten,rqvshten,rqvcuten, cldfra_old, &
 		ddvel, z, dz8w, p8w, t8w, exch_h,         &
 		moist(ims,kms,jms,P_QV), moist(ims,kms,jms,P_QC), moist(ims,kms,jms,P_QI), &
-        scalar(ims,kms,jms,P_QNDROP), f_qc, f_qi, chem, &
+        scalar(ims,kms,jms,P_QNDROP), f_qc, f_qi, chem,&
+            fn11,fn12,fn13,fn14,fn21,fn22,fn23,fn24,&
+           fn31,fn32,fn33,fn34,fn41,fn42,fn43,fn44,&
+           na11,na12,na13,na14,na21,na22,na23,na24,&
+           na31,na32,na33,na34,na41,na42,na43,na44,&
+           vo11,vo12,vo13,vo14,vo21,vo22,vo23,vo24,&
+           vo31,vo32,vo33,vo34,vo41,vo42,vo43,vo44,&
+           dl11,dl12,dl13,dl14,dl21,dl22,dl23,dl24,&
+           dl31,dl32,dl33,dl34,dl41,dl42,dl43,dl44,&
+           dh11,dh12,dh13,dh14,dh21,dh22,dh23,dh24,&
+           dh31,dh32,dh33,dh34,dh41,dh42,dh43,dh44,&
+           sg11,sg12,sg13,sg14,sg21,sg22,sg23,sg24,&
+           sg31,sg32,sg33,sg34,sg41,sg42,sg43,sg44,&
+           hg11,hg12,hg13,hg14,hg21,hg22,hg23,hg24,&
+           hg31,hg32,hg33,hg34,hg41,hg42,hg43,hg44,&
         ccn1, ccn2, ccn3, ccn4, ccn5, ccn6, nsource,       &
 		ids,ide, jds,jde, kds,kde,                        &
 		ims,ime, jms,jme, kms,kme,                        &
-		its,ite, jts,jte, kts,kte                         )
+		its,ite, jts,jte, kts,kte,                        &
+		emtair,empres,emrh,emwbar                         )
    CASE (RACM_SOA_VBS_AQCHEM_KPP)
       CALL wrf_debug(15,'call mixactivate for soa-vbs aerosol')
       call soa_vbs_mixactivate (                        &
                 id, ktau, dtstep, config_flags, idrydep_onoff,   &
-                dryrho_phy, t_phy, w, cldfra, cldfra_old, &
+                dryrho_phy, t_phy, p_phy, w, cldfra, rh_ml,rqvblten,rqvshten,rqvcuten, cldfra_old, &
                 ddvel, z, dz8w, p8w, t8w, exch_h,         &
                 moist(ims,kms,jms,P_QV), moist(ims,kms,jms,P_QC),moist(ims,kms,jms,P_QI), &
-        scalar(ims,kms,jms,P_QNDROP), f_qc, f_qi, chem, &
+        scalar(ims,kms,jms,P_QNDROP), f_qc, f_qi, chem,&
+            fn11,fn12,fn13,fn14,fn21,fn22,fn23,fn24,&
+           fn31,fn32,fn33,fn34,fn41,fn42,fn43,fn44,&
+           na11,na12,na13,na14,na21,na22,na23,na24,&
+           na31,na32,na33,na34,na41,na42,na43,na44,&
+           vo11,vo12,vo13,vo14,vo21,vo22,vo23,vo24,&
+           vo31,vo32,vo33,vo34,vo41,vo42,vo43,vo44,&
+           dl11,dl12,dl13,dl14,dl21,dl22,dl23,dl24,&
+           dl31,dl32,dl33,dl34,dl41,dl42,dl43,dl44,&
+           dh11,dh12,dh13,dh14,dh21,dh22,dh23,dh24,&
+           dh31,dh32,dh33,dh34,dh41,dh42,dh43,dh44,&
+           sg11,sg12,sg13,sg14,sg21,sg22,sg23,sg24,&
+           sg31,sg32,sg33,sg34,sg41,sg42,sg43,sg44,&
+           hg11,hg12,hg13,hg14,hg21,hg22,hg23,hg24,&
+           hg31,hg32,hg33,hg34,hg41,hg42,hg43,hg44,&
         ccn1, ccn2, ccn3, ccn4, ccn5, ccn6, nsource,       &
                 ids,ide, jds,jde, kds,kde,                        &
                 ims,ime, jms,jme, kms,kme,                        &
@@ -1100,10 +1158,24 @@ CONTAINS
       CALL wrf_debug(15,'call mixactivate for sorgam_vbs aerosol')
       call sorgam_vbs_mixactivate (                        &
                 id, ktau, dtstep, config_flags, idrydep_onoff,   &
-                dryrho_phy, t_phy, w, cldfra, cldfra_old, &
+                dryrho_phy, t_phy, p_phy, w, cldfra, rh_ml,rqvblten,rqvshten,rqvcuten, cldfra_old, &
                 ddvel, z, dz8w, p8w, t8w, exch_h,         &
                 moist(ims,kms,jms,P_QV), moist(ims,kms,jms,P_QC), moist(ims,kms,jms,P_QI), &
         scalar(ims,kms,jms,P_QNDROP), f_qc, f_qi, chem, &
+            fn11,fn12,fn13,fn14,fn21,fn22,fn23,fn24,&
+           fn31,fn32,fn33,fn34,fn41,fn42,fn43,fn44,&
+           na11,na12,na13,na14,na21,na22,na23,na24,&
+           na31,na32,na33,na34,na41,na42,na43,na44,&
+           vo11,vo12,vo13,vo14,vo21,vo22,vo23,vo24,&
+           vo31,vo32,vo33,vo34,vo41,vo42,vo43,vo44,&
+           dl11,dl12,dl13,dl14,dl21,dl22,dl23,dl24,&
+           dl31,dl32,dl33,dl34,dl41,dl42,dl43,dl44,&
+           dh11,dh12,dh13,dh14,dh21,dh22,dh23,dh24,&
+           dh31,dh32,dh33,dh34,dh41,dh42,dh43,dh44,&
+           sg11,sg12,sg13,sg14,sg21,sg22,sg23,sg24,&
+           sg31,sg32,sg33,sg34,sg41,sg42,sg43,sg44,&
+           hg11,hg12,hg13,hg14,hg21,hg22,hg23,hg24,&
+           hg31,hg32,hg33,hg34,hg41,hg42,hg43,hg44,&
         ccn1, ccn2, ccn3, ccn4, ccn5, ccn6, nsource,       &
                 ids,ide, jds,jde, kds,kde,                        &
                 ims,ime, jms,jme, kms,kme,                        &
@@ -1115,10 +1187,24 @@ CONTAINS
       CALL wrf_debug(15,'call mixactivate for mosaic aerosol')
       call mosaic_mixactivate (                        &
 		id, ktau, dtstep, config_flags, idrydep_onoff,   &
-		dryrho_phy, t_phy, w, cldfra, cldfra_old, &
+		dryrho_phy, t_phy, p_phy, w, cldfra, rh_ml, rqvblten,rqvshten,rqvcuten,cldfra_old, &
 		ddvel, z, dz8w, p8w, t8w, exch_h,         &
 		moist(ims,kms,jms,P_QV), moist(ims,kms,jms,P_QC), moist(ims,kms,jms,P_QI), &
-        scalar(ims,kms,jms,P_QNDROP), f_qc, f_qi, chem,   &
+        scalar(ims,kms,jms,P_QNDROP), f_qc, f_qi, chem,&
+            fn11,fn12,fn13,fn14,fn21,fn22,fn23,fn24,&
+           fn31,fn32,fn33,fn34,fn41,fn42,fn43,fn44,&
+           na11,na12,na13,na14,na21,na22,na23,na24,&
+           na31,na32,na33,na34,na41,na42,na43,na44,&
+           vo11,vo12,vo13,vo14,vo21,vo22,vo23,vo24,&
+           vo31,vo32,vo33,vo34,vo41,vo42,vo43,vo44,&
+           dl11,dl12,dl13,dl14,dl21,dl22,dl23,dl24,&
+           dl31,dl32,dl33,dl34,dl41,dl42,dl43,dl44,&
+           dh11,dh12,dh13,dh14,dh21,dh22,dh23,dh24,&
+           dh31,dh32,dh33,dh34,dh41,dh42,dh43,dh44,&
+           sg11,sg12,sg13,sg14,sg21,sg22,sg23,sg24,&
+           sg31,sg32,sg33,sg34,sg41,sg42,sg43,sg44,&
+           hg11,hg12,hg13,hg14,hg21,hg22,hg23,hg24,&
+           hg31,hg32,hg33,hg34,hg41,hg42,hg43,hg44,&
         ccn1, ccn2, ccn3, ccn4, ccn5, ccn6, nsource,      &
         qsrflx,                                           &
 		ids,ide, jds,jde, kds,kde,                        &

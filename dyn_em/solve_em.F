@@ -1848,7 +1848,7 @@ BENCH_END(small_step_finish_tim)
        !$OMP PARALLEL DO   &
        !$OMP PRIVATE ( ij )
        DO ij = 1 , grid%num_tiles
-         CALL wrf_debug ( 200 , ' call rk_update_scalar_pd' )
+         !CALL wrf_debug ( 200 , ' call rk_update_scalar_pd' )
          DO im = PARAM_FIRST_SCALAR, num_3d_m
            CALL rk_update_scalar_pd( im, im,                                   &
                                      moist_old(ims,kms,jms,im),                &
@@ -1911,7 +1911,7 @@ BENCH_END(small_step_finish_tim)
        !$OMP PARALLEL DO   &
        !$OMP PRIVATE ( ij )
        DO ij = 1 , grid%num_tiles
-         CALL wrf_debug ( 200 , ' call rk_update_scalar_pd' )
+         !CALL wrf_debug ( 200 , ' call rk_update_scalar_pd' )
          DO im = PARAM_FIRST_SCALAR, num_3d_s
            CALL rk_update_scalar_pd( im, im,                                  &
                                      scalar_old(ims,kms,jms,im),              &
@@ -1978,7 +1978,7 @@ BENCH_END(small_step_finish_tim)
          !$OMP PARALLEL DO   &
          !$OMP PRIVATE ( ij )
          DO ij = 1 , grid%num_tiles
-           CALL wrf_debug ( 200 , ' call rk_update_scalar_pd' )
+           !CALL wrf_debug ( 200 , ' call rk_update_scalar_pd' )
            DO im = PARAM_FIRST_SCALAR, num_3d_c
              CALL rk_update_scalar_pd( im, im,                                  &
                                        chem_old(ims,kms,jms,im),                &
@@ -2040,7 +2040,7 @@ BENCH_END(small_step_finish_tim)
          !$OMP PARALLEL DO   &
          !$OMP PRIVATE ( ij )
          DO ij = 1 , grid%num_tiles
-           CALL wrf_debug ( 200 , ' call rk_update_scalar_pd' )
+           !CALL wrf_debug ( 200 , ' call rk_update_scalar_pd' )
            DO im = PARAM_FIRST_SCALAR, num_tracer
              CALL rk_update_scalar_pd( im, im,                                  &
                                        tracer_old(ims,kms,jms,im),                &
@@ -2103,7 +2103,7 @@ BENCH_END(small_step_finish_tim)
          !$OMP PARALLEL DO   &
          !$OMP PRIVATE ( ij )
          DO ij = 1 , grid%num_tiles
-           CALL wrf_debug ( 200 , ' call rk_update_scalar_pd' )
+           !CALL wrf_debug ( 200 , ' call rk_update_scalar_pd' )
            CALL rk_update_scalar_pd( 1, 1,                                    &
                                      grid%tke_1,                              &
                                      tke_tend(ims,kms,jms),                   &
@@ -2297,7 +2297,7 @@ BENCH_END(rlx_bdy_scalar_tim)
              !$OMP PRIVATE ( ij, tenddec )
              moist_tile_loop_2: DO ij = 1 , grid%num_tiles
 
-               CALL wrf_debug ( 200 , ' call rk_update_scalar' )
+               !CALL wrf_debug ( 200 , ' call rk_update_scalar' )
                tenddec = .false.
 
 BENCH_START(update_scal_tim)
@@ -2410,7 +2410,7 @@ BENCH_START(tke_adv_tim)
          !$OMP PRIVATE ( ij, tenddec )
          tke_tile_loop_2: DO ij = 1 , grid%num_tiles
 
-           CALL wrf_debug ( 200 , ' call rk_update_scalar' )
+           !CALL wrf_debug ( 200 , ' call rk_update_scalar' )
            tenddec = .false.
            CALL rk_update_scalar( scs=1,  sce=1,                                          &
                                   scalar_1=grid%tke_1,                                    &
@@ -2466,7 +2466,7 @@ BENCH_START(chem_adv_tim)
            !$OMP PRIVATE ( ij, tenddec )
            chem_tile_loop_1: DO ij = 1 , grid%num_tiles
 
-             CALL wrf_debug ( 200 , ' call rk_scalar_tend in chem_tile_loop_1' )
+             !CALL wrf_debug ( 200 , ' call rk_scalar_tend in chem_tile_loop_1' )
              tenddec = (( config_flags%chemdiag == USECHEMDIAG ) .and. &
                         ( adv_ct_indices(ic) >= PARAM_FIRST_SCALAR ))
              CALL rk_scalar_tend ( ic, ic, config_flags, tenddec,                & 
@@ -2548,7 +2548,7 @@ end if
 
          chem_tile_loop_2: DO ij = 1 , grid%num_tiles
 
-           CALL wrf_debug ( 200 , ' call rk_update_scalar' )
+           !CALL wrf_debug ( 200 , ' call rk_update_scalar' )
            tenddec = (( config_flags%chemdiag == USECHEMDIAG ) .and. &
                       ( adv_ct_indices(ic) >= PARAM_FIRST_SCALAR ))
            CALL rk_update_scalar( scs=ic, sce=ic,                                         &
@@ -2704,7 +2704,7 @@ BENCH_START(tracer_adv_tim)
 
          tracer_tile_loop_2: DO ij = 1 , grid%num_tiles
 
-           CALL wrf_debug ( 200 , ' call rk_update_scalar' )
+           !CALL wrf_debug ( 200 , ' call rk_update_scalar' )
            tenddec = .false.
            CALL rk_update_scalar( scs=ic, sce=ic,                                         &
                                   scalar_1=tracer_old(ims,kms,jms,ic),                    &
@@ -2846,7 +2846,7 @@ BENCH_END(tracer_adv_tim)
          !$OMP PRIVATE ( ij, tenddec )
          scalar_tile_loop_2: DO ij = 1 , grid%num_tiles
 
-           CALL wrf_debug ( 200 , ' call rk_update_scalar' )
+           !CALL wrf_debug ( 200 , ' call rk_update_scalar' )
            tenddec = .false.
            CALL rk_update_scalar( scs=is, sce=is,                                         &
                                   scalar_1=scalar_old(ims,kms,jms,is),                    &
@@ -3742,7 +3742,12 @@ BENCH_START(micro_driver_tim)
       &        ,itype_3=grid%itype_3                                      & ! for Jensen ISHMAEL
       &        ,WARM_RAIN=grid%warm_rain                                  &
       &        ,T8W=t8w                                                   &
-      &        ,CLDFRA=grid%cldfra, EXCH_H=grid%exch_h &
+      &        ,CLDFRA=grid%cldfra                                        &
+      &        ,RH_ML=grid%rhml                                           &
+      &        ,RQVBLTEN=grid%rqvblten                                    &
+      &        ,RQVSHTEN=grid%rqvshten                                    &
+      &        ,RQVCUTEN=grid%rqvcuten                                    &
+      &        ,EXCH_H=grid%exch_h &
       &        ,NSOURCE=grid%qndropsource                                 &
 #if (WRF_CHEM == 1)
       &        ,QLSINK=grid%qlsink,CLDFRA_OLD=grid%cldfra_old             &
@@ -4722,7 +4727,7 @@ BENCH_END(bc_2d_tim)
 #  include "PERIOD_BDY_EM_E.inc"
 #endif
 
-   CALL wrf_debug ( 10 , ' call set_w_surface' )
+   CALL wrf_debug ( 10 , ' call Liran01 set_w_surface' )
    fill_w_flag = .false.
 
    !$OMP PARALLEL DO   &

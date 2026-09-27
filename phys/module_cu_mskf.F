@@ -2883,7 +2883,7 @@ end subroutine mskf_mphy
       real(r8) :: amcubeloc(naer_cu)
       real(r8) :: lnsmloc(naer_cu)
       maxmodes = naer_cu
-
+      CALL       wrf_debug ( 100 , 'Liran_test002' ) 
       if(maxmodes<pmode)then
 !         write(*,*)'maxmodes,pmode in activate =',maxmodes,pmode
 !         call endrun('kf_activate')

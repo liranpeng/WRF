@@ -908,7 +908,7 @@ SUBROUTINE MP_MORR_TWO_MOMENT_AERO(ITIMESTEP,                    &
    ELSE
      has_wetscav = .false.
    ENDIF
-   
+CALL wrf_debug ( 100 , 'Liran test morison aero' )   
 ! Initialize tendencies (all set to 0) and transfer
    ! array to local variables
    DT = DT_IN   
@@ -5715,7 +5715,6 @@ END SUBROUTINE MP_MORR_TWO_MOMENT_AERO
 
       nact=0.
 
-      !print*,'Doing MSKF-AERO Activation MDM'
 
       if(nmode.eq.1.and.naero(1).lt.1.e-20)return
 
@@ -5807,7 +5806,6 @@ subroutine mdm_prescribed_maxsat(zeta,eta,nmode,smc,smax)
       real smax ! maximum supersaturation
       integer m  ! mode index
       real sum, g1, g2
-
       do m=1,nmode
          if(zeta.gt.1.e5*eta(m).or.smc(m)*smc(m).gt.1.e5*eta(m))then
 !            weak forcing. essentially none activated

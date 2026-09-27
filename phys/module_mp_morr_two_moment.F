@@ -574,6 +574,7 @@ SUBROUTINE MP_MORR_TWO_MOMENT(ITIMESTEP,                       &
 !jdf		   ,C2PREC3D,CSED3D,ISED3D,SSED3D,GSED3D,RSED3D & ! HM ADD, WRF-CHEM
                ,wetscav_on, rainprod, evapprod                      &
 		   ,QLSINK,PRECR,PRECI,PRECS,PRECG &        ! HM ADD, WRF-CHEM
+               ,re_cloud                             & ! LP: effective radius output for RRTMG
                                             )
  
 ! QV - water vapor mixing ratio (kg/kg)
@@ -657,6 +658,7 @@ SUBROUTINE MP_MORR_TWO_MOMENT(ITIMESTEP,                       &
                           rainprod, evapprod, &
                           PRECI,PRECS,PRECG,PRECR ! HM, WRF-CHEM
 !, effcs, effis
+   REAL, DIMENSION(ims:ime, kms:kme, jms:jme), optional,INTENT(INOUT):: re_cloud ! LP: effective radius (m) for RRTMG
 
    REAL, DIMENSION(ims:ime, kms:kme, jms:jme), INTENT(IN):: &
                           pii, p, dz, rho, w !, tke, nctend, nitend,kzh
@@ -759,7 +761,7 @@ SUBROUTINE MP_MORR_TWO_MOMENT(ITIMESTEP,                       &
    !
    ! Transfer 3D arrays into 1D for microphysical calculations
    !
-
+!CALL wrf_debug ( 100 , 'Liran test morison' )
 ! hm , initialize 1d tendency arrays to zero
 
       do k=kts,kte   ! k loop (vertical)
@@ -881,12 +883,14 @@ SUBROUTINE MP_MORR_TWO_MOMENT(ITIMESTEP,                       &
           IF ( PRESENT( PRECI ) ) PRECI(I,K,J) = ISED(K)
           IF ( PRESENT( PRECS ) ) PRECS(I,K,J) = SSED(K)
           IF ( PRESENT( PRECG ) ) PRECG(I,K,J) = GSED(K)
-! EFFECTIVE RADIUS FOR RADIATION CODE (currently not coupled)
+! EFFECTIVE RADIUS FOR RADIATION CODE
 ! HM, ADD LIMIT TO PREVENT BLOWING UP OPTICAL PROPERTIES, 8/18/07
 !          EFFCS(I,K,J)     = MIN(EFFC(I,K,J),50.)
 !          EFFCS(I,K,J)     = MAX(EFFCS(I,K,J),1.)
 !          EFFIS(I,K,J)     = MIN(EFFI(I,K,J),130.)
 !          EFFIS(I,K,J)     = MAX(EFFIS(I,K,J),13.)
+! LP: pass effective radius (m) to RRTMG via re_cloud (solar_diag + radiation)
+          IF (PRESENT(re_cloud)) re_cloud(I,K,J) = MIN(MAX(EFFC(I,K,J),1.0),50.0) * 1.0E-6
 
 #if ( WRF_CHEM == 1)
            IF ( has_wetscav ) THEN

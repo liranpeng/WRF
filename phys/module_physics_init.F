@@ -1004,6 +1004,7 @@ CHARACTER(LEN=8) :: name
          (config_flags%ra_sw_physics .eq. goddardswscheme ) ) .and. &
         (config_flags%mp_physics  .eq. THOMPSON .or.        &
          config_flags%mp_physics  .eq. THOMPSONAERO .or.    &
+         config_flags%mp_physics  .eq. MORR_TWO_MOMENT .or. &   ! LP: Morrison computes EFFC, now coupled
          (config_flags%mp_physics .eq. NSSL_2MOM .and. config_flags%nssl_2moment_on == 1) .or. &
          config_flags%mp_physics  .eq. WSM3SCHEME .or.      &
          config_flags%mp_physics  .eq. WSM5SCHEME .or.      &

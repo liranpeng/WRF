@@ -3,7 +3,7 @@
 # parse argument list
 
 thiscmd=$0
-
+WRF_CHEM=1
 FORTRAN_COMPILER_TIMER=""
 opt_level="-f"
 rword="-r4"
@@ -477,7 +477,7 @@ if [ -n "$WRF_CMAQ" ] ; then
   echo building WRF with CMAQ option
   compileflags="${compileflags}!-DWRF_CMAQ"
 fi
-
+echo lirancheck $WRF_CHEM
 if [ -n "$WRF_CHEM" ] ; then
   if [ $WRF_CHEM = 1 ] ; then
     echo building WRF with chemistry option

@@ -1204,7 +1204,6 @@ old_cloud_nsubmix_loop: &
       integer ndist(nx)  ! accumulates frequency distribution of integration bins required
       data ndist/nx*0/
       save ndist
-
       if(ntot_amode<pmode)then
          write(iulog,*)'ntot_amode,pmode in activate =',ntot_amode,pmode
 #ifdef WRF_PORT
@@ -1560,7 +1559,6 @@ old_cloud_nsubmix_loop: &
       real(r8) smax ! maximum supersaturation
       integer m  ! mode index
       real(r8) sum, g1, g2, g1sqrt, g2sqrt
-
       do m=1,nmode
          if(zeta(m).gt.1.e5_r8*eta(m).or.smc(m)*smc(m).gt.1.e5_r8*eta(m))then
 !            weak forcing. essentially none activated

@@ -4017,6 +4017,8 @@ END subroutine optical_prep_modal_soa_vbs
           vol_cl  = mass_cl  / dens_cl
           vol_soil  = mass_soil  / dens_dust
           vol_msa  = mass_msa  / dens_msa
+          CALL       wrf_debug ( 100 , 'Liran hygroscopicities' )
+          print*,'Liran 002'
 !         vol_h2o = mass_h2o / dens_h2o
 ! 7/23/09 SAM calculate vol_h2o from kappas in Petters and Kreidenweis ACP, 2007, vol. 7, 1961-1971.
 !  Their kappas are the hygroscopicities used in Abdul-Razzak and Ghan, 2004, JGR, V105, p. 6837-6844. 

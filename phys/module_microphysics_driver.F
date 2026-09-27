@@ -14,7 +14,8 @@ SUBROUTINE microphysics_driver(                                          &
                       ,warm_rain                                         &
                       ,t8w                                               &
                       ,chem_opt, progn                                   &
-                      ,cldfra, cldfra_old, exch_h, nsource               &
+                      ,cldfra, rh_ml, rqvblten,rqvshten,rqvcuten         &
+                      ,cldfra_old, exch_h, nsource                       &
                       ,qlsink, precr, preci, precs, precg                &
                       ,xland,snowh,itimestep                             &
                       ,f_ice_phy,f_rain_phy,f_rimef_phy                  &
@@ -628,7 +629,7 @@ REAL, DIMENSION( ims:ime, kms:kme, jms:jme ),                        &
          OPTIONAL,                                                &
          INTENT(INOUT ) ::                                        &
                   u,v,w, z, t8w                                       &
-                 ,cldfra, cldfra_old, exch_h                      &
+                 ,cldfra, rh_ml, rqvblten,rqvshten,rqvcuten, cldfra_old, exch_h                      &
                  ,qv_curr,qc_curr,qr_curr,qi_curr,qs_curr,qg_curr &
                  ,qt_curr,qndrop_curr,qni_curr,qh_curr,qnh_curr   &
                  ,qns_curr,qnr_curr,qng_curr,qnn_curr,qnc_curr    &
@@ -921,7 +922,8 @@ REAL, DIMENSION( ims:ime, kms:kme, jms:jme ),                        &
              call prescribe_aerosol_mixactivate (               &
                   id, itimestep, dt, naer,                      &
                   ccn_conc, chem_opt,                           & !RAS13.1
-                  rho, th, pi_phy, w, cldfra, cldfra_old,       &
+                  rho, th, p, pi_phy, w, cldfra, rh_ml,         &
+                  rqvblten,rqvshten,rqvcuten, cldfra_old,       &
                   z, dz8w, p8w, t8w, exch_h,                    &
                   qv_curr, qc_curr, qi_curr, qndrop_curr,       &
                   nsource,                                      &
@@ -1493,7 +1495,7 @@ REAL, DIMENSION( ims:ime, kms:kme, jms:jme ),                        &
         ENDIF
 
     CASE (MORR_TWO_MOMENT)
-         CALL wrf_debug(100, 'microphysics_driver: calling morrison two moment')
+         CALL wrf_debug(100, 'microphysics_driverLiran88: calling morrison two moment')
          IF (PRESENT (QV_CURR) .AND. PRESENT (QC_CURR) .AND. &
              PRESENT (QR_CURR) .AND. PRESENT (QI_CURR) .AND. &
          PRESENT (QS_CURR) .AND. PRESENT (QG_CURR) .AND. &
@@ -1548,6 +1550,7 @@ REAL, DIMENSION( ims:ime, kms:kme, jms:jme ),                        &
                  ,EVAPPROD=evapprod,RAINPROD=rainprod          &
 #endif
                  ,PRECR=precr,PRECI=preci,PRECS=precs,PRECG=precg   & ! jdf for wrf-chem
+                 ,RE_CLOUD=re_cloud                               & ! LP: effective radius for RRTMG
                                                                     )
         ELSE
            Call wrf_error_fatal( 'arguments not present for calling morrison two moment')
@@ -1755,7 +1758,7 @@ REAL, DIMENSION( ims:ime, kms:kme, jms:jme ),                        &
 
 # if (EM_CORE == 1)
     CASE (MORR_TM_AERO)
-         CALL wrf_debug(100, 'microphysics_driver: calling morrison two moment')
+         CALL wrf_debug(100, 'microphysics_driver Liran: calling morrison two moment')
          CALL mp_morr_two_moment_aero(                            &
                      ITIMESTEP=itimestep,                &  !*
                      TH=th,                              &  !*
@@ -1828,7 +1831,7 @@ REAL, DIMENSION( ims:ime, kms:kme, jms:jme ),                        &
 #endif
 
     CASE (MILBRANDT2MOM)
-         CALL wrf_debug(100, 'microphysics_driver: calling milbrandt2mom')
+         CALL wrf_debug(100, 'microphysics_driver Liran: calling milbrandt2mom')
          IF (PRESENT (QV_CURR) .AND.                           &
              PRESENT (QC_CURR) .AND. PRESENT (QNC_CURR)  .AND. &
              PRESENT (QR_CURR) .AND. PRESENT (QNR_CURR)  .AND. &

@@ -4743,7 +4743,7 @@ BENCH_END(bc_2d_tim)
 #  include "PERIOD_BDY_EM_E.inc"
 #endif
 
-   CALL wrf_debug ( 10 , ' call set_w_surface' )
+   CALL wrf_debug ( 10 , ' call Liran 03 set_w_surface' )
    fill_w_flag = .false.
 
    !$OMP PARALLEL DO   &
@@ -4897,7 +4897,7 @@ BENCH_END(bc_2d_tim)
 
 !  Adjoint of resetting surface w for consistency
 
-   CALL wrf_debug ( 10 , ' call a_set_w_surface' )
+   CALL wrf_debug ( 10 , ' call Liran 02 a_set_w_surface' )
    fill_w_flag = .false.
 
    !$OMP PARALLEL DO   &

@@ -11,7 +11,7 @@
 
 MODULE module_mixactivate
 PRIVATE
-PUBLIC prescribe_aerosol_mixactivate, mixactivate, activate !BSINGH - added 'activate' for WRFCuP scheme
+PUBLIC prescribe_aerosol_mixactivate, mixactivate, activate, activate_ml 
 CONTAINS
 
 
@@ -22,7 +22,7 @@ CONTAINS
       subroutine prescribe_aerosol_mixactivate (                      &
 		grid_id, ktau, dtstep, naer,                          &
 		ccn_conc, chem_opt,                                   & ! RAS
-		rho_phy, th_phy, pi_phy, w, cldfra, cldfra_old,       &
+		rho_phy, th_phy, pre, pi_phy, w, cldfra, rh_ml, rqvblten,rqvshten,rqvcuten, cldfra_old,       &
 		z, dz8w, p_at_w, t_at_w, exch_h,                      &
         qv, qc, qi, qndrop3d,                                &
         nsource,                                              &
@@ -51,11 +51,11 @@ CONTAINS
 
 	real, intent(in),   &
 		dimension( ims:ime, kms:kme, jms:jme ) :: &
-		rho_phy, th_phy, pi_phy, w,  &
+		rho_phy, th_phy, pre, pi_phy, w,  &
 		z, dz8w, p_at_w, t_at_w, exch_h
 
 	real, intent(inout),   &
-		dimension( ims:ime, kms:kme, jms:jme ) :: cldfra, cldfra_old
+		dimension( ims:ime, kms:kme, jms:jme ) :: cldfra, rh_ml, rqvblten,rqvshten,rqvcuten, cldfra_old
 
 	real, intent(in),   &
 		dimension( ims:ime, kms:kme, jms:jme ) :: &
@@ -97,7 +97,21 @@ CONTAINS
 ! terminology:  (pi/6) * (mean-volume diameter)**3 ==
 !       (volume mixing ratio of section/mode)/(number mixing ratio)
 	real, dimension(ims:ime,kms:kme,jms:jme) :: &
-	     ccn1,ccn2,ccn3,ccn4,ccn5,ccn6  ! number conc of aerosols activated at supersat
+	     ccn1,ccn2,ccn3,ccn4,ccn5,ccn6,&
+           fn11,fn12,fn13,fn14,fn21,fn22,fn23,fn24,&
+           fn31,fn32,fn33,fn34,fn41,fn42,fn43,fn44,&
+           na11,na12,na13,na14,na21,na22,na23,na24,&
+           na31,na32,na33,na34,na41,na42,na43,na44,&
+           vo11,vo12,vo13,vo14,vo21,vo22,vo23,vo24,&
+           vo31,vo32,vo33,vo34,vo41,vo42,vo43,vo44,&
+           dl11,dl12,dl13,dl14,dl21,dl22,dl23,dl24,&
+           dl31,dl32,dl33,dl34,dl41,dl42,dl43,dl44,&
+           dh11,dh12,dh13,dh14,dh21,dh22,dh23,dh24,&
+           dh31,dh32,dh33,dh34,dh41,dh42,dh43,dh44,&
+           sg11,sg12,sg13,sg14,sg21,sg22,sg23,sg24,&
+           sg31,sg32,sg33,sg34,sg41,sg42,sg43,sg44,&
+           hg11,hg12,hg13,hg14,hg21,hg22,hg23,hg24,&
+           hg31,hg32,hg33,hg34,hg41,hg42,hg43,hg44
 	integer idrydep_onoff
 	real, dimension(ims:ime,kms:kme,jms:jme) :: t_phy
 	integer msectional
@@ -205,7 +219,7 @@ CONTAINS
 ! 06-nov-2005 rce - grid_id & ktau added to arg list
       call mixactivate(  msectional,     &
             chem,max_chem,qv,qc,qi,qndrop3d,        &
-            t_phy, w, ddvel, idrydep_onoff,  &
+            t_phy, pre, w, ddvel, idrydep_onoff,  &
             maxd_acomp, maxd_asize, maxd_atype, maxd_aphase,   &
             ncomp_aer, nsize_aer, ntype_aer, nphase_aer,  &
             numptr_aer, massptr_aer, dlo_sect, dhi_sect, sigmag_aer, dpvolmean_aer,  &
@@ -215,7 +229,21 @@ CONTAINS
             ims,ime, jms,jme, kms,kme,                            &
             its,ite, jts,jte, kts,kte,                            &
             rho_phy, z, dz8w, p_at_w, t_at_w, exch_h,      &
-            cldfra, cldfra_old, qsrflx,         &
+            cldfra, rh_ml, rqvblten,rqvshten,rqvcuten, cldfra_old, qsrflx,&
+            fn11,fn12,fn13,fn14,fn21,fn22,fn23,fn24,&
+           fn31,fn32,fn33,fn34,fn41,fn42,fn43,fn44,&
+           na11,na12,na13,na14,na21,na22,na23,na24,&
+           na31,na32,na33,na34,na41,na42,na43,na44,&
+           vo11,vo12,vo13,vo14,vo21,vo22,vo23,vo24,&
+           vo31,vo32,vo33,vo34,vo41,vo42,vo43,vo44,&
+           dl11,dl12,dl13,dl14,dl21,dl22,dl23,dl24,&
+           dl31,dl32,dl33,dl34,dl41,dl42,dl43,dl44,&
+           dh11,dh12,dh13,dh14,dh21,dh22,dh23,dh24,&
+           dh31,dh32,dh33,dh34,dh41,dh42,dh43,dh44,&
+           sg11,sg12,sg13,sg14,sg21,sg22,sg23,sg24,&
+           sg31,sg32,sg33,sg34,sg41,sg42,sg43,sg44,&
+           hg11,hg12,hg13,hg14,hg21,hg22,hg23,hg24,&
+           hg31,hg32,hg33,hg34,hg41,hg42,hg43,hg44,&
             ccn1, ccn2, ccn3, ccn4, ccn5, ccn6, nsource,       &
             grid_id, ktau, dtstep, &
             F_QC=f_qc, F_QI=f_qi                              )
@@ -236,7 +264,7 @@ CONTAINS
 ! 25-apr-2006 rce - dens_aer is (g/cm3), NOT (kg/m3)
 subroutine mixactivate(  msectional,            &
            chem, num_chem, qv, qc, qi, qndrop3d,         &
-           temp, w, ddvel, idrydep_onoff,  &
+           temp, pressure, w, ddvel, idrydep_onoff,  &
            maxd_acomp, maxd_asize, maxd_atype, maxd_aphase,   &
            ncomp_aer, nsize_aer, ntype_aer, nphase_aer,  &
            numptr_aer, massptr_aer, dlo_sect, dhi_sect, sigmag_aer, dpvolmean_aer,  &
@@ -246,10 +274,25 @@ subroutine mixactivate(  msectional,            &
            ims,ime, jms,jme, kms,kme,                            &
            its,ite, jts,jte, kts,kte,                            &
            rho, zm, dz8w, p_at_w, t_at_w, kvh,      &
-           cldfra, cldfra_old, qsrflx,          &
+           cldfra, rh_ml, rqvblten,rqvshten,rqvcuten,cldfra_old, qsrflx,&
+           fn11,fn12,fn13,fn14,fn21,fn22,fn23,fn24,&
+           fn31,fn32,fn33,fn34,fn41,fn42,fn43,fn44,&
+           na11,na12,na13,na14,na21,na22,na23,na24,&
+           na31,na32,na33,na34,na41,na42,na43,na44,&
+           vo11,vo12,vo13,vo14,vo21,vo22,vo23,vo24,&
+           vo31,vo32,vo33,vo34,vo41,vo42,vo43,vo44,&
+           dl11,dl12,dl13,dl14,dl21,dl22,dl23,dl24,&
+           dl31,dl32,dl33,dl34,dl41,dl42,dl43,dl44,&
+           dh11,dh12,dh13,dh14,dh21,dh22,dh23,dh24,&
+           dh31,dh32,dh33,dh34,dh41,dh42,dh43,dh44,&
+           sg11,sg12,sg13,sg14,sg21,sg22,sg23,sg24,&
+           sg31,sg32,sg33,sg34,sg41,sg42,sg43,sg44,&
+           hg11,hg12,hg13,hg14,hg21,hg22,hg23,hg24,&
+           hg31,hg32,hg33,hg34,hg41,hg42,hg43,hg44,&
            ccn1, ccn2, ccn3, ccn4, ccn5, ccn6, nsource,       &
            grid_id, ktau, dtstep, &
-           f_qc, f_qi                       )
+           f_qc, f_qi, &
+           emtair, empres, emrh, emwbar       )
 
 
 !     vertical diffusion and nucleation of cloud droplets
@@ -303,6 +346,7 @@ subroutine mixactivate(  msectional,            &
 
   real, intent(in) :: dtstep             ! time step for microphysics (s)
   real, intent(in) :: temp(ims:ime, kms:kme, jms:jme)    ! temperature (K)
+  real, intent(in) :: pressure(ims:ime, kms:kme, jms:jme) ! pressure (Pa)
   real, intent(in) :: w(ims:ime, kms:kme, jms:jme)   ! vertical velocity (m/s)
   real, intent(in) :: rho(ims:ime, kms:kme, jms:jme)    ! density at mid-level  (kg/m3)
   REAL, intent(in) :: ddvel( its:ite, jts:jte, num_chem ) ! deposition velocity  (m/s)
@@ -313,9 +357,28 @@ subroutine mixactivate(  msectional,            &
   real, intent(in) :: kvh(ims:ime, kms:kme, jms:jme)    ! vertical diffusivity (m2/s)
   real, intent(inout) :: cldfra_old(ims:ime, kms:kme, jms:jme)! cloud fraction on previous time step
   real, intent(inout) :: cldfra(ims:ime, kms:kme, jms:jme)    ! cloud fraction
+  real, intent(inout) :: rh_ml(ims:ime, kms:kme, jms:jme)
+  real, intent(inout) :: rqvblten(ims:ime, kms:kme, jms:jme)
+  real, intent(inout) :: rqvshten(ims:ime, kms:kme, jms:jme)
+  real, intent(inout) :: rqvcuten(ims:ime, kms:kme, jms:jme)
   real, intent(in) :: hygro( its:ite, kts:kte, jts:jte, maxd_asize, maxd_atype ) ! bulk hygroscopicity   &
 
   REAL, intent(out), DIMENSION( ims:ime, jms:jme, num_chem ) ::   qsrflx ! dry deposition rate for aerosol
+  real, intent(out), dimension(ims:ime,kms:kme,jms:jme) :: fn11,fn12,fn13,fn14,fn21,fn22,fn23,fn24
+  real, intent(out), dimension(ims:ime,kms:kme,jms:jme) :: fn31,fn32,fn33,fn34,fn41,fn42,fn43,fn44
+  real, intent(out), dimension(ims:ime,kms:kme,jms:jme) :: na11,na12,na13,na14,na21,na22,na23,na24
+  real, intent(out), dimension(ims:ime,kms:kme,jms:jme) :: na31,na32,na33,na34,na41,na42,na43,na44
+  real, intent(out), dimension(ims:ime,kms:kme,jms:jme) :: vo11,vo12,vo13,vo14,vo21,vo22,vo23,vo24
+  real, intent(out), dimension(ims:ime,kms:kme,jms:jme) :: vo31,vo32,vo33,vo34,vo41,vo42,vo43,vo44  
+  real, intent(out), dimension(ims:ime,kms:kme,jms:jme) :: dl11,dl12,dl13,dl14,dl21,dl22,dl23,dl24
+  real, intent(out), dimension(ims:ime,kms:kme,jms:jme) :: dl31,dl32,dl33,dl34,dl41,dl42,dl43,dl44
+  real, intent(out), dimension(ims:ime,kms:kme,jms:jme) :: dh11,dh12,dh13,dh14,dh21,dh22,dh23,dh24
+  real, intent(out), dimension(ims:ime,kms:kme,jms:jme) :: dh31,dh32,dh33,dh34,dh41,dh42,dh43,dh44  
+  real, intent(out), dimension(ims:ime,kms:kme,jms:jme) :: sg11,sg12,sg13,sg14,sg21,sg22,sg23,sg24
+  real, intent(out), dimension(ims:ime,kms:kme,jms:jme) :: sg31,sg32,sg33,sg34,sg41,sg42,sg43,sg44
+  real, intent(out), dimension(ims:ime,kms:kme,jms:jme) :: hg11,hg12,hg13,hg14,hg21,hg22,hg23,hg24
+  real, intent(out), dimension(ims:ime,kms:kme,jms:jme) :: hg31,hg32,hg33,hg34,hg41,hg42,hg43,hg44
+  real, intent(out), optional, dimension(ims:ime,kms:kme,jms:jme) :: emtair, empres, emrh, emwbar
   real, intent(out), dimension(ims:ime,kms:kme,jms:jme) :: nsource, &  ! droplet number source (#/kg/s)
        ccn1,ccn2,ccn3,ccn4,ccn5,ccn6  ! number conc of aerosols activated at supersat
 
@@ -346,7 +409,7 @@ subroutine mixactivate(  msectional,            &
   real :: srcn(kms:kme)        ! droplet source rate (/s)
   real, parameter :: sq2pi = 2.5066282746
   real dtinv
-
+  character(len=256) :: msg 
   integer km1,kp1
   real wbar,wmix,wmin,wmax
   real dum
@@ -357,6 +420,7 @@ subroutine mixactivate(  msectional,            &
   real fac_srflx
   real depvel_drop, depvel_tmp
   real, parameter :: depvel_uplimit = 1.0 ! upper limit for dep vels (m/s)
+  real, parameter :: eps = 0.1
   real :: surfrate(num_chem) ! surface exchange rate (/s)
   real surfratemax      ! max surfrate for all species treated here
   real surfrate_drop    ! surfade exchange rate for droplelts
@@ -387,6 +451,7 @@ subroutine mixactivate(  msectional,            &
   real ::   source(kms:kme) !
 
   real ::   fn(maxd_asize, maxd_atype)         ! activation fraction for aerosol number
+  real ::   fn_ARG(maxd_asize, maxd_atype)         ! activation fraction for aerosol number by ARG
   real ::   fs(maxd_asize, maxd_atype)         ! activation fraction for aerosol sfcarea
   real ::   fm(maxd_asize, maxd_atype)         ! activation fraction for aerosol mass
   integer ::   ncomp(maxd_atype)
@@ -499,6 +564,10 @@ subroutine mixactivate(  msectional,            &
   END IF
 
   qsrflx(its:ite,jts:jte,:) = 0.
+  if (present(emtair)) emtair(its:ite,kts:kte,jts:jte) = 0.0
+  if (present(empres)) empres(its:ite,kts:kte,jts:jte) = 0.0
+  if (present(emrh))   emrh(its:ite,kts:kte,jts:jte)   = 0.0
+  if (present(emwbar)) emwbar(its:ite,kts:kte,jts:jte) = 0.0
 
 !     start loop over columns
 
@@ -681,15 +750,19 @@ GROW_SHRINK_MAIN_K_LOOP: do k=kts,kte
         endif
 
         if ((tmpc1 > 0.001) .or. (tmpc2 > 0.001)) then
-
-!                wmix=wtke(k)
+         
+         WRITE(msg,*) 'call activate_ml 2, lcldfra(k)=', k,lcldfra(k), ' lcldfra_old(k) = ', lcldfra_old(k)
+         CALL wrf_debug(15, TRIM(msg))
+         
+!          wmix=wtke(k)
            wbar=w(i,k,j)+wtke(k)
            wmix=0.
            wmin=0.
 ! 06-nov-2005 rce - increase wmax from 10 to 50 (deep convective clouds)
            wmax=50.
            wdiab=0
-
+         WRITE(msg,*) 'call activate_ml 2, wbar=', wbar, ' wtke(k) = ', wtke(k)  
+         CALL wrf_debug(15, TRIM(msg))
 !                load aerosol properties, assuming external mixtures
            do n=1,ntype_aer
               do m=1,nsize_aer(n)
@@ -710,11 +783,178 @@ GROW_SHRINK_MAIN_K_LOOP: do k=kts,kte
            enddo
 
 ! 06-nov-2005 rce - grid_id & ktau added to arg list
-           call activate(wbar,wmix,wdiab,wmin,wmax,temp(i,k,j),cs(k), &
-                msectional, maxd_atype, ntype_aer, maxd_asize, nsize_aer,    &
+         WRITE(msg,*) 'rqvblten =', rqvblten(i,k,j), ' rqvshten = ', rqvshten(i,k,j) , ' rqvcuten = ', rqvcuten(i,k,j)  
+         CALL wrf_debug(15, TRIM(msg))
+           wmix=0.
+           call activate_ml(wbar,wmix,wdiab,wmin,wmax,temp(i,k,j),pressure(i,j,k),cs(k), qv(i,k,j), qc(i,k,j),qi(i,k,j), rh_ml(i,k,j), &
+                rqvblten(i,k,j),rqvshten(i,k,j),rqvcuten(i,k,j),msectional, maxd_atype, ntype_aer, maxd_asize, nsize_aer,    &
                 naerosol, vaerosol,  &
                 dlo_sect,dhi_sect,sigmag_aer,hygro_aer,              &
-                fn,fs,fm,fluxn,fluxs,fluxm,flux_fullact(k), grid_id, ktau, i, j, k )
+                fn,fn_ARG,fs,fm,fluxn,fluxs,fluxm,flux_fullact(k), grid_id, ktau, i, j, k )
+           if (present(emtair)) emtair(i,k,j) = temp(i,k,j)
+           if (present(empres)) empres(i,k,j) = r_d*cs(k)*temp(i,k,j)/100.0
+           if (present(emrh))   emrh(i,k,j)   = rh_ml(i,k,j)*100.0
+           if (present(emwbar)) emwbar(i,k,j) = wbar*100.0
+           do n = 1,ntype_aer
+              do m = 1,nsize_aer(n)
+                if ((abs(m - 1.0) < eps) .and. (abs(n - 1.0) < eps)) then
+                        fn11(i,k,j)=fn(m,n)
+                        na11(i,k,j)=naerosol(m,n)
+                        vo11(i,k,j)=vaerosol(m,n)
+                        dl11(i,k,j)=dlo_sect(m,n)
+                        dh11(i,k,j)=dhi_sect(m,n)
+                        sg11(i,k,j)=sigmag_aer(m,n)
+                        hg11(i,k,j)=hygro_aer(m,n)
+! BUGFIX: fn13/fn23 are PERSISTENT state arrays.  This (GROW_SHRINK) call site
+! refreshed fn11/fn21/na11/na21/em* but never wrote fn13/fn23, which were only
+! assigned under the n==3/n==4 branches below -- dead code, because
+! ntype_aer = maxd_atype <= 2.  A cell last served here therefore carried
+! CURRENT inputs paired with a STALE ARG answer from whenever the OLD_CLOUD
+! site last touched it.  Mirror the OLD_CLOUD writes so fn13/fn23 advance in
+! lockstep with fn11/fn21 and the em* emulator inputs.
+                        fn13(i,k,j)=fn_ARG(m,n)
+                endif
+                if ((abs(m - 1.0) < eps) .and. (abs(n - 2.0) < eps)) then
+                        fn12(i,k,j)=fn(m,n)
+                        na12(i,k,j)=naerosol(m,n)
+                        vo12(i,k,j)=vaerosol(m,n)
+                        dl12(i,k,j)=dlo_sect(m,n)
+                        dh12(i,k,j)=dhi_sect(m,n)
+                        sg12(i,k,j)=sigmag_aer(m,n)
+                        hg12(i,k,j)=hygro_aer(m,n)
+                        fn14(i,k,j)=fn_ARG(m,n)          ! BUGFIX: see fn13 note above
+                endif
+                if ((abs(m - 1.0) < eps) .and. (abs(n - 3.0) < eps)) then
+                        fn13(i,k,j)=fn_ARG(1,1)
+                        na13(i,k,j)=naerosol(m,n)
+                        vo13(i,k,j)=vaerosol(m,n)
+                        dl13(i,k,j)=dlo_sect(m,n)
+                        dh13(i,k,j)=dhi_sect(m,n)
+                        sg13(i,k,j)=sigmag_aer(m,n)
+                        hg13(i,k,j)=hygro_aer(m,n)
+                endif
+                if ((abs(m - 1.0) < eps) .and. (abs(n - 4.0) < eps)) then
+                        fn14(i,k,j)=fn_ARG(1,2)
+                        na14(i,k,j)=naerosol(m,n)
+                        vo14(i,k,j)=vaerosol(m,n)
+                        dl14(i,k,j)=dlo_sect(m,n)
+                        dh14(i,k,j)=dhi_sect(m,n)
+                        sg14(i,k,j)=sigmag_aer(m,n)
+                        hg14(i,k,j)=hygro_aer(m,n)
+                endif
+                if ((abs(m - 2.0) < eps) .and. (abs(n - 1.0) < eps)) then
+                        fn21(i,k,j)=fn(m,n)
+                        na21(i,k,j)=naerosol(m,n)
+                        vo21(i,k,j)=vaerosol(m,n)
+                        dl21(i,k,j)=dlo_sect(m,n)
+                        dh21(i,k,j)=dhi_sect(m,n)
+                        sg21(i,k,j)=sigmag_aer(m,n)
+                        hg21(i,k,j)=hygro_aer(m,n)
+                        fn23(i,k,j)=fn_ARG(m,n)          ! BUGFIX: see fn13 note above
+                endif
+                if ((abs(m - 2.0) < eps) .and. (abs(n - 2.0) < eps)) then
+                        fn22(i,k,j)=fn(m,n)
+                        na22(i,k,j)=naerosol(m,n)
+                        vo22(i,k,j)=vaerosol(m,n)
+                        dl22(i,k,j)=dlo_sect(m,n)
+                        dh22(i,k,j)=dhi_sect(m,n)
+                        sg22(i,k,j)=sigmag_aer(m,n)
+                        hg22(i,k,j)=hygro_aer(m,n)
+                        fn24(i,k,j)=fn_ARG(m,n)          ! BUGFIX: see fn13 note above
+                endif
+                if ((abs(m - 2.0) < eps) .and. (abs(n - 3.0) < eps)) then
+                        fn23(i,k,j)=fn_ARG(2,1)
+                        na23(i,k,j)=naerosol(m,n)
+                        vo23(i,k,j)=vaerosol(m,n)
+                        dl23(i,k,j)=dlo_sect(m,n)
+                        dh23(i,k,j)=dhi_sect(m,n)
+                        sg23(i,k,j)=sigmag_aer(m,n)
+                        hg23(i,k,j)=hygro_aer(m,n)
+                endif
+                if ((abs(m - 2.0) < eps) .and. (abs(n - 4.0) < eps)) then
+                        fn24(i,k,j)=fn_ARG(2,2)
+                        na24(i,k,j)=naerosol(m,n)
+                        vo24(i,k,j)=vaerosol(m,n)
+                        dl24(i,k,j)=dlo_sect(m,n)
+                        dh24(i,k,j)=dhi_sect(m,n)
+                        sg24(i,k,j)=sigmag_aer(m,n)
+                        hg24(i,k,j)=hygro_aer(m,n)
+                endif
+                if ((abs(m - 3.0) < eps) .and. (abs(n - 1.0) < eps)) then
+                        fn31(i,k,j)=fn(m,n)
+                        na31(i,k,j)=naerosol(m,n)
+                        vo31(i,k,j)=vaerosol(m,n)
+                        dl31(i,k,j)=dlo_sect(m,n)
+                        dh31(i,k,j)=dhi_sect(m,n)
+                        sg31(i,k,j)=sigmag_aer(m,n)
+                        hg31(i,k,j)=hygro_aer(m,n)
+                endif
+                if ((abs(m - 3.0) < eps) .and. (abs(n - 2.0) < eps)) then
+                        fn32(i,k,j)=fn(m,n)
+                        na32(i,k,j)=naerosol(m,n)
+                        vo32(i,k,j)=vaerosol(m,n)
+                        dl32(i,k,j)=dlo_sect(m,n)
+                        dh32(i,k,j)=dhi_sect(m,n)
+                        sg32(i,k,j)=sigmag_aer(m,n)
+                        hg32(i,k,j)=hygro_aer(m,n)
+                endif
+                if ((abs(m - 3.0) < eps) .and. (abs(n - 3.0) < eps)) then
+                        fn33(i,k,j)=fn(m,n)
+                        na33(i,k,j)=naerosol(m,n)
+                        vo33(i,k,j)=vaerosol(m,n)
+                        dl33(i,k,j)=dlo_sect(m,n)
+                        dh33(i,k,j)=dhi_sect(m,n)
+                        sg33(i,k,j)=sigmag_aer(m,n)
+                        hg33(i,k,j)=hygro_aer(m,n)
+                endif
+                if ((abs(m - 3.0) < eps) .and. (abs(n - 4.0) < eps)) then
+                        fn34(i,k,j)=fn(m,n)
+                        na34(i,k,j)=naerosol(m,n)
+                        vo34(i,k,j)=vaerosol(m,n)
+                        dl34(i,k,j)=dlo_sect(m,n)
+                        dh34(i,k,j)=dhi_sect(m,n)
+                        sg34(i,k,j)=sigmag_aer(m,n)
+                        hg34(i,k,j)=hygro_aer(m,n)
+                endif
+                if ((abs(m - 4.0) < eps) .and. (abs(n - 1.0) < eps)) then
+                        fn41(i,k,j)=fn(m,n)
+                        na41(i,k,j)=naerosol(m,n)
+                        vo41(i,k,j)=vaerosol(m,n)
+                        dl41(i,k,j)=dlo_sect(m,n)
+                        dh41(i,k,j)=dhi_sect(m,n)
+                        sg41(i,k,j)=sigmag_aer(m,n)
+                        hg41(i,k,j)=hygro_aer(m,n)
+                endif
+                if ((abs(m - 4.0) < eps) .and. (abs(n - 2.0) < eps)) then
+                        fn42(i,k,j)=fn(m,n)
+                        na42(i,k,j)=naerosol(m,n)
+                        vo42(i,k,j)=vaerosol(m,n)
+                        dl42(i,k,j)=dlo_sect(m,n)
+                        dh42(i,k,j)=dhi_sect(m,n)
+                        sg42(i,k,j)=sigmag_aer(m,n)
+                        hg42(i,k,j)=hygro_aer(m,n)
+                endif
+                if ((abs(m - 4.0) < eps) .and. (abs(n - 3.0) < eps)) then
+                        fn43(i,k,j)=fn(m,n)
+                        na43(i,k,j)=naerosol(m,n)
+                        vo43(i,k,j)=vaerosol(m,n)
+                        dl43(i,k,j)=dlo_sect(m,n)
+                        dh43(i,k,j)=dhi_sect(m,n)
+                        sg43(i,k,j)=sigmag_aer(m,n)
+                        hg43(i,k,j)=hygro_aer(m,n)
+                endif
+                if ((abs(m - 4.0) < eps) .and. (abs(n - 4.0) < eps)) then
+                        fn44(i,k,j)=fn(m,n)
+                        na44(i,k,j)=naerosol(m,n)
+                        vo44(i,k,j)=vaerosol(m,n)
+                        dl44(i,k,j)=dlo_sect(m,n)
+                        dh44(i,k,j)=dhi_sect(m,n)
+                        sg44(i,k,j)=sigmag_aer(m,n)
+                        hg44(i,k,j)=hygro_aer(m,n)
+                endif
+              enddo
+           enddo
+
 
            do n = 1,ntype_aer
               do m = 1,nsize_aer(n)
@@ -840,13 +1080,175 @@ OLD_CLOUD_MAIN_K_LOOP: do k=kts,kte
 
                     enddo
                  enddo
+                 wmix=0.
 !          print *,'old cloud wbar,wmix=',wbar,wmix
+                  WRITE(msg,*) 'call activate_ml 1, wbar=', wbar, ' wmix = ', wmix
+                  CALL wrf_debug(15, TRIM(msg))
+                  WRITE(msg,*) 'call activate_ml 1, lcldfra(k)=', k,lcldfra(k), ' lcldfra(km1) = ', km1,lcldfra(km1)
+                  CALL wrf_debug(15, TRIM(msg))
 
-                 call activate(wbar,wmix,wdiab,wmin,wmax,temp(i,k,j),cs(k), &
-                      msectional, maxd_atype, ntype_aer, maxd_asize, nsize_aer,    &
+                 call activate_ml(wbar,wmix,wdiab,wmin,wmax,temp(i,k,j),pressure(i,j,k),cs(k), qv(i,k,j), qc(i,k,j),qi(i,k,j), rh_ml(i,k,j),&
+                      rqvblten(i,k,j),rqvshten(i,k,j),rqvcuten(i,k,j),msectional, maxd_atype, ntype_aer, maxd_asize, nsize_aer,    &
                       naerosol, vaerosol,  &
                       dlo_sect,dhi_sect, sigmag_aer,hygro_aer,                    &
-                      fn,fs,fm,fluxn,fluxs,fluxm,flux_fullact(k), grid_id, ktau, i, j, k )
+                      fn,fn_ARG,fs,fm,fluxn,fluxs,fluxm,flux_fullact(k), grid_id, ktau, i, j, k )
+                  if (present(emtair)) emtair(i,k,j) = temp(i,k,j)
+                  if (present(empres)) empres(i,k,j) = r_d*cs(k)*temp(i,k,j)/100.0
+                  if (present(emrh))   emrh(i,k,j)   = rh_ml(i,k,j)*100.0
+                  if (present(emwbar)) emwbar(i,k,j) = wbar*100.0
+                  do n=1,ntype_aer
+                        do m=1,nsize_aer(n)
+                              if ((abs(m - 1.0) < eps) .and. (abs(n - 1.0) < eps)) then
+                                       fn11(i,k,j)=fn(m,n)
+                                       na11(i,k,j)=naerosol(m,n)
+                                       vo11(i,k,j)=vaerosol(m,n)
+                                       dl11(i,k,j)=dlo_sect(m,n)
+                                       dh11(i,k,j)=dhi_sect(m,n)
+                                       sg11(i,k,j)=sigmag_aer(m,n)
+                                       hg11(i,k,j)=hygro_aer(m,n)
+                                       fn13(i,k,j)=fn_ARG(m,n)
+                              endif
+                              if ((abs(m - 1.0) < eps) .and. (abs(n - 2.0) < eps)) then
+                                       fn12(i,k,j)=fn(m,n)
+                                       na12(i,k,j)=naerosol(m,n)
+                                       vo12(i,k,j)=vaerosol(m,n)
+                                       dl12(i,k,j)=dlo_sect(m,n)
+                                       dh12(i,k,j)=dhi_sect(m,n)
+                                       sg12(i,k,j)=sigmag_aer(m,n)
+                                       hg12(i,k,j)=hygro_aer(m,n)
+                                       fn14(i,k,j)=fn_ARG(m,n)
+                              endif
+                              if ((abs(m - 1.0) < eps) .and. (abs(n - 3.0) < eps)) then
+                                       fn13(i,k,j)=fn_ARG(1,1)
+                                       na13(i,k,j)=naerosol(m,n)
+                                       vo13(i,k,j)=vaerosol(m,n)
+                                       dl13(i,k,j)=dlo_sect(m,n)
+                                       dh13(i,k,j)=dhi_sect(m,n)
+                                       sg13(i,k,j)=sigmag_aer(m,n)
+                                       hg13(i,k,j)=hygro_aer(m,n)
+                              endif
+                              if ((abs(m - 1.0) < eps) .and. (abs(n - 4.0) < eps)) then
+                                       fn14(i,k,j)=fn_ARG(1,2)
+                                       na14(i,k,j)=naerosol(m,n)
+                                       vo14(i,k,j)=vaerosol(m,n)
+                                       dl14(i,k,j)=dlo_sect(m,n)
+                                       dh14(i,k,j)=dhi_sect(m,n)
+                                       sg14(i,k,j)=sigmag_aer(m,n)
+                                       hg14(i,k,j)=hygro_aer(m,n)
+                              endif
+                              if ((abs(m - 2.0) < eps) .and. (abs(n - 1.0) < eps)) then
+                                       fn21(i,k,j)=fn(m,n)
+                                       na21(i,k,j)=naerosol(m,n)
+                                       vo21(i,k,j)=vaerosol(m,n)
+                                       dl21(i,k,j)=dlo_sect(m,n)
+                                       dh21(i,k,j)=dhi_sect(m,n)
+                                       sg21(i,k,j)=sigmag_aer(m,n)
+                                       hg21(i,k,j)=hygro_aer(m,n)
+                                       fn23(i,k,j)=fn_ARG(m,n)
+                              endif
+                              if ((abs(m - 2.0) < eps) .and. (abs(n - 2.0) < eps)) then
+                                       fn22(i,k,j)=fn(m,n)
+                                       na22(i,k,j)=naerosol(m,n)
+                                       vo22(i,k,j)=vaerosol(m,n)
+                                       dl22(i,k,j)=dlo_sect(m,n)
+                                       dh22(i,k,j)=dhi_sect(m,n)
+                                       sg22(i,k,j)=sigmag_aer(m,n)
+                                       hg22(i,k,j)=hygro_aer(m,n)
+                                       fn24(i,k,j)=fn_ARG(m,n)
+                              endif
+                              if ((abs(m - 2.0) < eps) .and. (abs(n - 3.0) < eps)) then
+                                       fn23(i,k,j)=fn_ARG(2,1)
+                                       na23(i,k,j)=naerosol(m,n)
+                                       vo23(i,k,j)=vaerosol(m,n)
+                                       dl23(i,k,j)=dlo_sect(m,n)
+                                       dh23(i,k,j)=dhi_sect(m,n)
+                                       sg23(i,k,j)=sigmag_aer(m,n)
+                                       hg23(i,k,j)=hygro_aer(m,n)
+                              endif
+                              if ((abs(m - 2.0) < eps) .and. (abs(n - 4.0) < eps)) then
+                                       fn24(i,k,j)=fn_ARG(2,2)
+                                       na24(i,k,j)=naerosol(m,n)
+                                       vo24(i,k,j)=vaerosol(m,n)
+                                       dl24(i,k,j)=dlo_sect(m,n)
+                                       dh24(i,k,j)=dhi_sect(m,n)
+                                       sg24(i,k,j)=sigmag_aer(m,n)
+                                       hg24(i,k,j)=hygro_aer(m,n)
+                              endif
+                              if ((abs(m - 3.0) < eps) .and. (abs(n - 1.0) < eps)) then
+                                       fn31(i,k,j)=fn(m,n)
+                                       na31(i,k,j)=naerosol(m,n)
+                                       vo31(i,k,j)=vaerosol(m,n)
+                                       dl31(i,k,j)=dlo_sect(m,n)
+                                       dh31(i,k,j)=dhi_sect(m,n)
+                                       sg31(i,k,j)=sigmag_aer(m,n)
+                                       hg31(i,k,j)=hygro_aer(m,n)
+                              endif
+                              if ((abs(m - 3.0) < eps) .and. (abs(n - 2.0) < eps)) then
+                                       fn32(i,k,j)=fn(m,n)
+                                       na32(i,k,j)=naerosol(m,n)
+                                       vo32(i,k,j)=vaerosol(m,n)
+                                       dl32(i,k,j)=dlo_sect(m,n)
+                                       dh32(i,k,j)=dhi_sect(m,n)
+                                       sg32(i,k,j)=sigmag_aer(m,n)
+                                       hg32(i,k,j)=hygro_aer(m,n)
+                              endif
+                              if ((abs(m - 3.0) < eps) .and. (abs(n - 3.0) < eps)) then
+                                       fn33(i,k,j)=fn(m,n)
+                                       na33(i,k,j)=naerosol(m,n)
+                                       vo33(i,k,j)=vaerosol(m,n)
+                                       dl33(i,k,j)=dlo_sect(m,n)
+                                       dh33(i,k,j)=dhi_sect(m,n)
+                                       sg33(i,k,j)=sigmag_aer(m,n)
+                                       hg33(i,k,j)=hygro_aer(m,n)
+                              endif
+                              if ((abs(m - 3.0) < eps) .and. (abs(n - 4.0) < eps)) then
+                                       fn34(i,k,j)=fn(m,n)
+                                       na34(i,k,j)=naerosol(m,n)
+                                       vo34(i,k,j)=vaerosol(m,n)
+                                       dl34(i,k,j)=dlo_sect(m,n)
+                                       dh34(i,k,j)=dhi_sect(m,n)
+                                       sg34(i,k,j)=sigmag_aer(m,n)
+                                       hg34(i,k,j)=hygro_aer(m,n)
+                              endif
+                              if ((abs(m - 4.0) < eps) .and. (abs(n - 1.0) < eps)) then
+                                       fn41(i,k,j)=fn(m,n)
+                                       na41(i,k,j)=naerosol(m,n)
+                                       vo41(i,k,j)=vaerosol(m,n)
+                                       dl41(i,k,j)=dlo_sect(m,n)
+                                       dh41(i,k,j)=dhi_sect(m,n)
+                                       sg41(i,k,j)=sigmag_aer(m,n)
+                                       hg41(i,k,j)=hygro_aer(m,n)
+                              endif
+                              if ((abs(m - 4.0) < eps) .and. (abs(n - 2.0) < eps)) then
+                                       fn42(i,k,j)=fn(m,n)
+                                       na42(i,k,j)=naerosol(m,n)
+                                       vo42(i,k,j)=vaerosol(m,n)
+                                       dl42(i,k,j)=dlo_sect(m,n)
+                                       dh42(i,k,j)=dhi_sect(m,n)
+                                       sg42(i,k,j)=sigmag_aer(m,n)
+                                       hg42(i,k,j)=hygro_aer(m,n)
+                              endif
+                              if ((abs(m - 4.0) < eps) .and. (abs(n - 3.0) < eps)) then
+                                       fn43(i,k,j)=fn(m,n)
+                                       na43(i,k,j)=naerosol(m,n)
+                                       vo43(i,k,j)=vaerosol(m,n)
+                                       dl43(i,k,j)=dlo_sect(m,n)
+                                       dh43(i,k,j)=dhi_sect(m,n)
+                                       sg43(i,k,j)=sigmag_aer(m,n)
+                                       hg43(i,k,j)=hygro_aer(m,n)
+                              endif
+                              if ((abs(m - 4.0) < eps) .and. (abs(n - 4.0) < eps)) then
+                                       fn44(i,k,j)=fn(m,n)
+                                       na44(i,k,j)=naerosol(m,n)
+                                       vo44(i,k,j)=vaerosol(m,n)
+                                       dl44(i,k,j)=dlo_sect(m,n)
+                                       dh44(i,k,j)=dhi_sect(m,n)
+                                       sg44(i,k,j)=sigmag_aer(m,n)
+                                       hg44(i,k,j)=hygro_aer(m,n)
+                              endif
+                        enddo
+                     enddo                
+
                  
 ! rce-comment
 !    the activation-fraction fluxes (fluxn, fluxm) from subr activate assume that
@@ -1413,7 +1815,7 @@ OLD_CLOUD_NSUBMIX_LOOP: do nsub=1,nsubmix
 !      2. Multiple aerosol types. J. Geophys. Res., 105, 6837-6844.
 
       USE module_model_constants, only: g,rhowater, xlv, cp, rvovrd, r_d, r_v, &
-              mwdry,svp1,svp2,svp3,ep_2
+              mwdry,ep_2
 
       implicit none
 
@@ -1480,6 +1882,11 @@ OLD_CLOUD_NSUBMIX_LOOP: do nsub=1,nsubmix
       real diff0,conduct0
       real es ! saturation vapor pressure
       real qs ! water vapor saturation mixing ratio
+      real esw, esi ! saturation vapor pressure over water and ice
+      real qvsw, qvsi ! saturation mixing ratio over water and ice
+      real qvs_weight ! weighted saturation mixing ratio
+      real tc ! temperature in Celsius
+      real weight_ice ! ice/water weight for saturation calculation
       real dqsdt ! change in qs with temperature
       real dqsdp ! change in qs with pressure
       real gg ! thermodynamic function (m2/s)
@@ -1541,7 +1948,14 @@ OLD_CLOUD_NSUBMIX_LOOP: do nsub=1,nsubmix
       real, parameter :: sq2  = 1.4142135624
       real, parameter :: sqpi = 1.7724538509
       real, parameter :: pi   = 3.1415926536
-
+!     Constants for ice saturation (matching module_radiation_driver.F)
+      real, parameter :: SVP1_rad  = 0.61078
+      real, parameter :: SVP2_rad  = 17.2693882    ! for water
+      real, parameter :: SVPI2_rad = 21.8745584    ! for ice
+      real, parameter :: SVP3_rad  = 35.86         ! for water
+      real, parameter :: SVPI3_rad = 7.66          ! for ice
+      real, parameter :: SVPT0_rad = 273.15
+      real, parameter :: QCLDMIN_rad = 1.E-12
 !      integer, save :: ndist(nx)  ! accumulates frequency distribution of integration bins required
 !      data ndist/nx*0/
 
@@ -1637,8 +2051,26 @@ OLD_CLOUD_NSUBMIX_LOOP: do nsub=1,nsubmix
       pres=r_d*rhoair*tair
       diff0=0.211e-4*(p0/pres)*(tair/t0)**1.94
       conduct0=(5.69+0.017*(tair-t0))*4.186e2*1.e-5 ! convert to J/m/s/deg
-      es=1000.*svp1*exp( svp2*(tair-t0)/(tair-svp3) )
-      qs=ep_2*es/(pres-es)
+      !     Calculate saturation vapor pressure and mixing ratio using ice/water weighting
+!     (matching module_radiation_driver.F approach)
+      tc = tair - SVPT0_rad
+      esw = 1000.0 * SVP1_rad * exp( SVP2_rad * tc / ( tair - SVP3_rad ) )
+      esi = 1000.0 * SVP1_rad * exp( SVPI2_rad * tc / ( tair - SVPI3_rad ) )
+      qvsw = ep_2 * esw / ( pres - esw )
+      qvsi = ep_2 * esi / ( pres - esi )
+!     Temperature-based weight: pure liquid above 273.15K, pure ice below 253.15K
+      if (tair .gt. SVPT0_rad) then
+         weight_ice = 0.0
+      else if (tair .lt. SVPT0_rad - 20.0) then
+         weight_ice = 1.0
+      else
+         weight_ice = (SVPT0_rad - tair) / 20.0
+      endif
+      qvs_weight = (1.0 - weight_ice) * qvsw + weight_ice * qvsi
+!     Use weighted saturation for activation calculations
+      es = (1.0 - weight_ice) * esw + weight_ice * esi
+      qs = qvs_weight
+      
       dqsdt=xlv/(r_v*tair*tair)*qs
       alpha=g*(xlv/(cp*r_v*tair*tair)-1./(r_d*tair))
       gamma=(1+xlv/cp*dqsdt)/(rhoair*qs)
@@ -2590,7 +3022,1665 @@ OLD_CLOUD_NSUBMIX_LOOP: do nsub=1,nsubmix
       return
       end subroutine activate
 
+!----------------------------------------------------------------------
+! 06-nov-2005 rce - grid_id & ktau added to arg list
+      subroutine activate_ml(wbar, sigw, wdiab, wminf, wmaxf, tair, pressure, rhoair, qv, qc, qi, rh_ml, &
+                      qvblten,qvshten,qvcuten,msectional, maxd_atype, ntype_aer, maxd_asize, nsize_aer,    &
+                      na, volc, dlo_sect,dhi_sect,sigman, hygro, &
+                      fn, fn_ARG, fs, fm, fluxn, fluxs, fluxm, flux_fullact, &
+                      grid_id, ktau, ii, jj, kk,smax_prescribed )!BSINGH - Added smax_prescribed for WRFCuP
 
+!      calculates number, surface, and mass fraction of aerosols activated as CCN
+!      calculates flux of cloud droplets, surface area, and aerosol mass into cloud
+!      assumes an internal mixture within each of aerosol mode.
+!      A sectional treatment within each type is assumed if ntype_aer >7.
+!      A gaussiam spectrum of updrafts can be treated.
+
+!      mks units
+
+!      Abdul-Razzak and Ghan, A parameterization of aerosol activation.
+!      2. Multiple aerosol types. J. Geophys. Res., 105, 6837-6844.
+      use module_wrf_error , only : wrf_err_message
+      USE module_model_constants, only: g,rhowater, xlv, cp, rvovrd, r_d, r_v, &
+              mwdry,ep_2
+
+      ! Liran add ML start ====================================
+      use, intrinsic :: iso_c_binding
+      use, intrinsic :: iso_fortran_env, only: real32
+      use ftorch, only: &
+         torch_model, torch_tensor, &
+         torch_model_load, torch_model_forward, &
+         torch_kCPU, torch_kCUDA
+      ! The specific procedure is public in ftorch_tensor but is NOT re-exported
+      ! by the ftorch module (which only re-exports the generic
+      ! torch_tensor_from_array), so it must be imported from ftorch_tensor.
+      use ftorch_tensor, only: &
+         torch_tensor_from_array_real32_2d_default_layout
+      ! Liran add ML end ====================================
+
+      implicit none
+
+
+!      input.   
+
+      integer,intent(in) :: maxd_atype      ! dimension of types
+      integer,intent(in) :: maxd_asize      ! dimension of sizes
+      integer,intent(in) :: ntype_aer       ! number of types
+      integer,intent(in) :: nsize_aer(maxd_atype) ! number of sizes for type
+      integer,intent(in) :: msectional      ! 1 for sectional, 0 for modal
+      integer,intent(in) :: grid_id         ! WRF grid%id
+      integer,intent(in) :: ktau            ! WRF time step count
+      integer,intent(in) :: ii, jj, kk      ! i,j,k of current grid cell
+      real,intent(in) :: wbar          ! grid cell mean vertical velocity (m/s)
+      real,intent(in) :: sigw          ! subgrid standard deviation of vertical vel (m/s)
+      real,intent(in) :: wdiab         ! diabatic vertical velocity (0 if adiabatic)
+      real,intent(in) :: wminf         ! minimum updraft velocity for integration (m/s)
+      real,intent(in) :: wmaxf         ! maximum updraft velocity for integration (m/s)
+      real,intent(in) :: tair          ! air temperature (K)
+      real,intent(in) :: pressure
+      real,intent(in) :: rhoair        ! air density (kg/m3)
+      real,intent(in) :: qv            ! water vapor mixing ratio (g/g)
+      real,intent(in) :: qc 
+      real,intent(in) :: qi 
+      real,intent(in) :: rh_ml,qvblten,qvshten,qvcuten
+      real,intent(in) :: na(maxd_asize,maxd_atype)     ! aerosol number concentration (/m3)
+      real,intent(in) :: sigman(maxd_asize,maxd_atype) ! geometric standard deviation of aerosol size distribution
+      real,intent(in) :: hygro(maxd_asize,maxd_atype)  ! bulk hygroscopicity of aerosol mode
+      real,intent(in) :: volc(maxd_asize,maxd_atype)   ! total aerosol volume  concentration (m3/m3)
+      real,intent(in) :: dlo_sect( maxd_asize, maxd_atype ), &  ! minimum size of section (cm)
+           dhi_sect( maxd_asize, maxd_atype )     ! maximum size of section (cm)
+      real,intent(in),optional :: smax_prescribed  ! prescribed max. supersaturation for secondary activation !BSINGH - Added for WRFCuP
+
+!      output
+
+      real,intent(inout) :: fn(maxd_asize,maxd_atype)    ! number fraction of aerosols activated
+      real,intent(inout) :: fn_ARG(maxd_asize,maxd_atype) ! number fraction of aerosols activated based on default ARG
+      real,intent(inout) :: fs(maxd_asize,maxd_atype)    ! surface fraction of aerosols activated
+      real,intent(inout) :: fm(maxd_asize,maxd_atype)    ! mass fraction of aerosols activated
+      real,intent(inout) :: fluxn(maxd_asize,maxd_atype) ! flux of activated aerosol number fraction into cloud (m/s)
+      real,intent(inout) :: fluxs(maxd_asize,maxd_atype) ! flux of activated aerosol surface fraction (m/s)
+      real,intent(inout) :: fluxm(maxd_asize,maxd_atype) ! flux of activated aerosol mass fraction into cloud (m/s)
+      real,intent(inout) :: flux_fullact                 ! flux when activation fraction = 100% (m/s)
+
+!      local
+
+!!$      external erf,erfc
+!!$      real erf,erfc
+!      external qsat_water
+      integer, parameter:: nx=200
+      integer iquasisect_option, isectional
+      real integ,integf
+      real, parameter :: surften = 0.076 ! surface tension of water w/respect to air (N/m)
+      real, parameter :: p0 = 1013.25e2  ! reference pressure (Pa)
+      real, parameter :: t0 = 273.15     ! reference temperature (K)
+      real ylo(maxd_asize,maxd_atype),yhi(maxd_asize,maxd_atype) ! 1-particle volume at section interfaces
+      real ymean(maxd_asize,maxd_atype) ! 1-particle volume at r=rmean
+      real ycut, lnycut, betayy, betayy2, gammayy, phiyy
+      real surfc(maxd_asize,maxd_atype) ! surface concentration (m2/m3)
+      real sign(maxd_asize,maxd_atype)    ! geometric standard deviation of size distribution
+      real alnsign(maxd_asize,maxd_atype) ! natl log of geometric standard dev of aerosol
+      real am(maxd_asize,maxd_atype) ! number mode radius of dry aerosol (m)
+      real lnhygro(maxd_asize,maxd_atype) ! ln(b)
+      real f1(maxd_asize,maxd_atype) ! array to hold parameter for maxsat
+      real pres ! pressure (Pa)
+      real path ! mean free path (m)
+      real diff ! diffusivity (m2/s)
+      real conduct ! thermal conductivity (Joule/m/sec/deg)
+      real diff0,conduct0
+      real es ! saturation vapor pressure
+      real qs ! water vapor saturation mixing ratio
+      real esw, esi ! saturation vapor pressure over water and ice
+      real qvsw, qvsi ! saturation mixing ratio over water and ice
+      real qvs_weight ! weighted saturation mixing ratio
+      real tc ! temperature in Celsius
+      real weight_ice ! ice/water weight for saturation calculation
+      real dqsdt ! change in qs with temperature
+      real dqsdp ! change in qs with pressure
+      real gg ! thermodynamic function (m2/s)
+      real sqrtg ! sqrt(gg)
+      real sm(maxd_asize,maxd_atype) ! critical supersaturation for number mode radius
+      real lnsm(maxd_asize,maxd_atype) ! ln( sm )
+      real zeta, eta(maxd_asize,maxd_atype)
+      real lnsmax ! ln(smax)
+      real alpha
+      real gamma
+      real beta
+      real gaus
+      logical :: top        ! true if cloud top, false if cloud base or new cloud
+      real asub(maxd_asize,maxd_atype),bsub(maxd_asize,maxd_atype) ! coefficients of submode size distribution N=a+bx
+      real totn(maxd_atype) ! total aerosol number concentration
+      real aten ! surface tension parameter
+      real gmrad(maxd_atype) ! geometric mean radius
+      real gmradsq(maxd_atype) ! geometric mean of radius squared
+      real gmlnsig(maxd_atype) ! geometric standard deviation
+      real gmsm(maxd_atype) ! critical supersaturation at radius gmrad
+      real sumflxn(maxd_asize,maxd_atype)
+      real sumflxs(maxd_asize,maxd_atype)
+      real sumflxm(maxd_asize,maxd_atype)
+      real sumflx_fullact
+      real sumfn(maxd_asize,maxd_atype)
+      real sumfs(maxd_asize,maxd_atype)
+      real sumfm(maxd_asize,maxd_atype)
+      real sumns(maxd_atype)
+      real fnold(maxd_asize,maxd_atype)   ! number fraction activated
+      real fsold(maxd_asize,maxd_atype)   ! surface fraction activated
+      real fmold(maxd_asize,maxd_atype)   ! mass fraction activated
+      real wold,gold
+      real alogten,alog2,alog3,alogaten
+      real alogam
+      real rlo(maxd_asize,maxd_atype), rhi(maxd_asize,maxd_atype)
+      real rmean(maxd_asize,maxd_atype)
+                  ! mean radius (m) for the section (not used with modal)
+                  ! calculated from current volume & number
+      real ccc
+      real dumaa,dumbb
+      real wmin,wmax,w,dw,dwmax,dwmin,wnuc,dwnew,wb
+      real dfmin,dfmax,fnew,fold,fnmin,fnbar,fsbar,fmbar
+      real alw,sqrtalw
+      real smax
+      real x,arg
+      real xmincoeff,xcut
+      real z,z1,z2,wf1,wf2,zf1,zf2,gf1,gf2,gf
+      real etafactor1,etafactor2(maxd_asize,maxd_atype),etafactor2max
+      integer m,n,nw,nwmax
+
+!      numerical integration parameters
+      real, parameter :: eps = 0.3
+      real, parameter :: fmax = 0.99
+      real, parameter :: sds = 3.
+      ! Liran add start ====================================
+      real, parameter :: pq0=379.90516
+      real, parameter :: a2=17.2693882
+      real, parameter :: a3=273.16
+      real, parameter :: a4=35.86
+      real, parameter :: rhmin=1.
+      real :: q
+      ! Liran add end ====================================
+
+      ! Liran add ML start ====================================
+      ! Kinds for FTorch interop
+
+      ! FTorch variables
+      logical :: model_loaded  = .false.
+      logical :: tensors_ready = .false.
+      type(torch_model), save   :: ml_model
+      type(torch_tensor) :: model_input_tensor, model_output_tensor
+      ! in_t/out_t MUST persist: they only WRAP the host buffers below, they do
+      ! not own the memory. Declaring them local rebuilt -- and finalized -- a
+      ! tensor pair on every call, which is the ftorch_tensor_mp_..._for_finalize
+      ! double-free. Bound once in the setup block and reused thereafter.
+      type(torch_tensor), save :: in_t(1), out_t(1)
+      integer(c_int) :: in_shape(2), out_shape(2)  ! shapes for 1D arrays
+
+      ! Dimensions (adjust as needed)
+      integer, parameter :: in_dim  = 16
+      integer, parameter :: out_dim = 4
+      integer :: dev_idx
+      ! Host arrays (match real32 API; keep contiguous/target).
+      ! SAVEd and fixed-size. These were non-saved ALLOCATABLEs: Fortran
+      ! deallocates a non-saved local allocatable at every RETURN, so each call
+      ! handed torch_tensor_from_array a fresh heap block and then freed it while
+      ! in_t/out_t still pointed at it. forward() could then write into a dead
+      ! buffer and output_array was read back holding its initialised 0.0 --
+      ! giving fn(1,1)=fn(2,1)=0 together (the online FN==0 population).
+      ! Static storage keeps the wrapped addresses valid for the whole run.
+      real(real32), save, target :: input_array(1,in_dim), output_array(1,out_dim)
+      real(real32) :: tmp_swap
+      ! Misc
+      integer :: idx
+      character(len=256) :: msg
+      real :: a1_ml, b1_ml, AA_ml, BB_ml, CC_ml
+      real :: disc_ml, phi_ml, phi1_ml, phi2_ml
+      real :: phiyy_ml, betayy_ml, dumaa_fs_ml, dumbb_fs_ml, dumaa_fm_ml
+      real :: x_ml, rhs_ml, sigma_ml, fval_ml, dfval_ml
+      integer :: it_ml
+      ! Liran add ML end ====================================
+
+!      mathematical constants
+      real third, twothird, sixth, zero, one, two, three
+
+      real, parameter :: sq2  = 1.4142135624
+      real, parameter :: sqpi = 1.7724538509
+      real, parameter :: pi   = 3.1415926536
+!     Constants for ice saturation (matching module_radiation_driver.F)
+      real, parameter :: SVP1_rad  = 0.61078
+      real, parameter :: SVP2_rad  = 17.2693882    ! for water
+      real, parameter :: SVPI2_rad = 21.8745584    ! for ice
+      real, parameter :: SVP3_rad  = 35.86         ! for water
+      real, parameter :: SVPI3_rad = 7.66          ! for ice
+      real, parameter :: SVPT0_rad = 273.15
+      real, parameter :: QCLDMIN_rad = 1.E-12
+
+!      integer, save :: ndist(nx)  ! accumulates frequency distribution of integration bins required
+!      data ndist/nx*0/
+
+!     for nsize_aer>7, a sectional approach is used and isectional = iquasisect_option
+!     activation fractions (fn,fs,fm) are computed as follows
+!     iquasisect_option = 1,3 - each section treated as a narrow lognormal
+!     iquasisect_option = 2,4 - within-section dn/dx = a + b*x,  x = ln(r)
+!     smax is computed as follows (when explicit activation is OFF)
+!     iquasisect_option = 1,2 - razzak-ghan modal parameterization with
+!     single mode having same ntot, dgnum, sigmag as the combined sections
+!     iquasisect_option = 3,4 - razzak-ghan sectional parameterization
+!     for nsize_aer=<9, a modal approach is used and isectional = 0
+
+! rce 08-jul-2005
+! if either (na(n,m) < nsmall) or (volc(n,m) < vsmall)
+! then treat bin/mode (n,m) as being empty, and set its fn/fs/fm=0.0
+!     (for single precision, gradual underflow starts around 1.0e-38,
+!      and strange things can happen when in that region)
+      real, parameter :: nsmall = 1.0e-20    ! aer number conc in #/m3
+      real, parameter :: vsmall = 1.0e-37    ! aer volume conc in m3/m3
+      logical bin_is_empty(maxd_asize,maxd_atype), all_bins_empty
+      logical bin_is_narrow(maxd_asize,maxd_atype)
+
+      integer idiagaa, ipass_nwloop
+      integer idiag_dndy_neg, idiag_fnsm_prob
+
+! The flag for cloud top is no longer used so set it to false. This is an
+! antiquated feature related to radiation enhancing mass fluxes at cloud
+! top. It is currently, as of Feb. 2009, set to false in the CAM version
+! as well.
+      top = .false.
+
+!.......................................................................
+!
+!   start calc. of modal or sectional activation properties (start of section 1)
+!
+!.......................................................................
+      idiag_dndy_neg = 1      ! set this to 0 to turn off 
+                              !     warnings about dn/dy < 0
+      idiag_fnsm_prob = 1     ! set this to 0 to turn off 
+                              !     warnings about fn/fs/fm misbehavior
+
+      iquasisect_option = 2
+      if(msectional.gt.0)then
+         isectional = iquasisect_option
+      else
+         isectional = 0
+      endif
+      !BSINGH - For WRFCuP
+      if ( present( smax_prescribed ) ) then
+         if (smax_prescribed <= 0.0) then
+            do n=1,ntype_aer
+               do m=1,nsize_aer(n)
+                  fluxn(m,n)=0.
+                  fn(m,n)=0.
+                  fluxs(m,n)=0.
+                  fs(m,n)=0.
+                  fluxm(m,n)=0.
+                  fm(m,n)=0.
+               end do
+            end do
+            flux_fullact=0.
+            return
+         end if
+      end if
+      
+      !BSINGH - ENDS
+
+
+      do n=1,ntype_aer
+!         print *,'ntype_aer,n,nsize_aer(n)=',ntype_aer,n,nsize_aer(n)
+
+        if(ntype_aer.eq.1.and.nsize_aer(n).eq.1.and.na(1,1).lt.1.e-20)then
+         fn(1,1)=0.
+         fs(1,1)=0.
+         fm(1,1)=0.
+         fluxn(1,1)=0.
+         fluxs(1,1)=0.
+         fluxm(1,1)=0.
+         flux_fullact=0.
+         return
+        endif
+      enddo
+
+      zero = 0.0
+      one = 1.0
+      two = 2.0
+      three = 3.0
+      third = 1.0/3.0
+      twothird = 2.0/3.0 !wig, 1-Mar-2009: Corrected value from 2/6
+      sixth = 1.0/6.0
+
+      pres=r_d*rhoair*tair
+      diff0=0.211e-4*(p0/pres)*(tair/t0)**1.94
+      conduct0=(5.69+0.017*(tair-t0))*4.186e2*1.e-5 ! convert to J/m/s/deg
+      !     Calculate saturation vapor pressure and mixing ratio using ice/water weighting
+!     (matching module_radiation_driver.F approach)
+      tc = tair - SVPT0_rad
+      esw = 1000.0 * SVP1_rad * exp( SVP2_rad * tc / ( tair - SVP3_rad ) )
+      esi = 1000.0 * SVP1_rad * exp( SVPI2_rad * tc / ( tair - SVPI3_rad ) )
+      qvsw = ep_2 * esw / ( pres - esw )
+      qvsi = ep_2 * esi / ( pres - esi )
+      weight_ice = qi/(qc+qi)
+      qvs_weight = (1.0 - weight_ice) * qvsw + weight_ice * qvsi
+!     Use weighted saturation for activation calculations
+      es = (1.0 - weight_ice) * esw + weight_ice * esi
+      qs = qvs_weight
+      WRITE( msg,* ) 'qs: ', qs
+      CALL wrf_debug ( 15 , TRIM(msg) )
+      WRITE( msg,* ) 'qv/qs000: ', qv/qs
+      CALL wrf_debug ( 15 , TRIM(msg) )
+      WRITE( msg,* ) 'qi: ', qi
+      CALL wrf_debug ( 15 , TRIM(msg) )
+      WRITE( msg,* ) 'qc: ', qc
+      CALL wrf_debug ( 15 , TRIM(msg) )
+      WRITE( msg,* ) 'rh_ml: ', rh_ml
+      CALL wrf_debug ( 15 , TRIM(msg) )
+      WRITE( msg,* ) 'qvblten: ', qvblten
+      CALL wrf_debug ( 15 , TRIM(msg) )
+      WRITE( msg,* ) 'qvshten: ', qvshten
+      CALL wrf_debug ( 15 , TRIM(msg) )
+      WRITE( msg,* ) 'qvcuten: ', qvcuten
+      CALL wrf_debug ( 15 , TRIM(msg) )
+      dqsdt=xlv/(r_v*tair*tair)*qs
+      alpha=g*(xlv/(cp*r_v*tair*tair)-1./(r_d*tair))
+      gamma=(1+xlv/cp*dqsdt)/(rhoair*qs)
+      gg=1./(rhowater/(diff0*rhoair*qs)+xlv*rhowater/(conduct0*tair)*(xlv/(r_v*tair)-1.))
+      sqrtg=sqrt(gg)
+      beta=4.*pi*rhowater*gg*gamma
+      aten=2.*surften/(r_v*tair*rhowater)
+      alogaten=log(aten)
+      alog2=log(two)
+      alog3=log(three)
+      ccc=4.*pi*third
+      etafactor2max=1.e10/(alpha*wmaxf)**1.5 ! this should make eta big if na is very small.
+
+      all_bins_empty = .true.
+      do n=1,ntype_aer
+      totn(n)=0.
+      gmrad(n)=0.
+      gmradsq(n)=0.
+      sumns(n)=0.
+      do m=1,nsize_aer(n)
+         alnsign(m,n)=log(sigman(m,n))
+!         internal mixture of aerosols
+
+         bin_is_empty(m,n) = .true.
+         if (volc(m,n).gt.vsmall .and. na(m,n).gt.nsmall) then
+            bin_is_empty(m,n) = .false.
+            all_bins_empty = .false.
+            lnhygro(m,n)=log(hygro(m,n))
+!            number mode radius (m,n)
+!           write(6,*)'alnsign,volc,na=',alnsign(m,n),volc(m,n),na(m,n)
+            am(m,n)=exp(-1.5*alnsign(m,n)*alnsign(m,n))*              &
+              (3.*volc(m,n)/(4.*pi*na(m,n)))**third
+
+            if (isectional .gt. 0) then
+!               sectional model.
+!               need to use bulk properties because parameterization doesn't
+!               work well for narrow bins.
+               totn(n)=totn(n)+na(m,n)
+               alogam=log(am(m,n))
+               gmrad(n)=gmrad(n)+na(m,n)*alogam
+               gmradsq(n)=gmradsq(n)+na(m,n)*alogam*alogam
+            endif
+            etafactor2(m,n)=1./(na(m,n)*beta*sqrtg)
+
+            if(hygro(m,n).gt.1.e-10)then
+               sm(m,n)=2.*aten/(3.*am(m,n))*sqrt(aten/(3.*hygro(m,n)*am(m,n)))
+            else
+               sm(m,n)=100.
+            endif
+!           write(6,*)'sm,hygro,am=',sm(m,n),hygro(m,n),am(m,n)
+         else
+            sm(m,n)=1.
+            etafactor2(m,n)=etafactor2max ! this should make eta big if na is very small.
+
+         endif
+         lnsm(m,n)=log(sm(m,n))
+         if ((isectional .eq. 3) .or. (isectional .eq. 4)) then
+            sumns(n)=sumns(n)+na(m,n)/sm(m,n)**twothird
+         endif
+!        write(6,'(a,i4,6g12.2)')'m,na,am,hygro,lnhygro,sm,lnsm=',m,na(m,n),am(m,n),hygro(m,n),lnhygro(m,n),sm(m,n),lnsm(m,n)
+      end do ! size
+      end do ! type
+
+!  if all bins are empty, set all activation fractions to zero and exit
+         if ( all_bins_empty ) then
+            do n=1,ntype_aer
+            do m=1,nsize_aer(n)
+               fluxn(m,n)=0.
+               fn(m,n)=0.
+               fluxs(m,n)=0.
+               fs(m,n)=0.
+               fluxm(m,n)=0.
+               fm(m,n)=0.
+            end do
+            end do
+            flux_fullact=0.
+            return
+         endif
+
+
+
+         if (isectional .le. 0) then
+            ! Initialize maxsat at this cell and timestep for the
+            ! modal setup (the sectional case is handled below).
+            call maxsat_init(maxd_atype, ntype_aer, &
+                 maxd_asize, nsize_aer, alnsign, f1)
+
+            goto 30000
+         end if
+
+         do n=1,ntype_aer
+            !wig 19-Oct-2006: Add zero trap based May 2006 e-mail from
+            !Ghan. Transport can clear out a cell leading to
+            !inconsistencies with the mass.
+            gmrad(n)=gmrad(n)/max(totn(n),1e-20)
+            gmlnsig=gmradsq(n)/totn(n)-gmrad(n)*gmrad(n)    ! [ln(sigmag)]**2
+            gmlnsig(n)=sqrt( max( 1.e-4, gmlnsig(n) ) )
+            gmrad(n)=exp(gmrad(n))
+            if ((isectional .eq. 3) .or. (isectional .eq. 4)) then
+               gmsm(n)=totn(n)/sumns(n)
+               gmsm(n)=gmsm(n)*gmsm(n)*gmsm(n)
+               gmsm(n)=sqrt(gmsm(n))
+            else
+!              gmsm(n)=2.*aten/(3.*gmrad(n))*sqrt(aten/(3.*hygro(1,n)*gmrad(n)))
+               gmsm(n)=2.*aten/(3.*gmrad(n))*sqrt(aten/(3.*hygro(nsize_aer(n),n)*gmrad(n)))
+            endif
+         enddo
+         
+         ! Initialize maxsat at this cell and timestep for the
+         ! sectional setup (the modal case is handled above)...
+         call maxsat_init(maxd_atype, ntype_aer, &
+              maxd_asize, (/1/), gmlnsig, f1)
+
+!.......................................................................
+!   calculate sectional "sub-bin" size distribution
+!
+!   dn/dy = nt*( a + b*y )   for  ylo < y < yhi
+!
+!   nt = na(m,n) = number mixing ratio of the bin
+!   y = v/vhi
+!       v = (4pi/3)*r**3 = particle volume
+!       vhi = v at r=rhi (upper bin boundary)
+!   ylo = y at lower bin boundary = vlo/vhi = (rlo/rhi)**3
+!   yhi = y at upper bin boundary = 1.0
+!
+!   dv/dy = v * dn/dy = nt*vhi*( a*y + b*y*y )
+!
+!.......................................................................
+! 02-may-2006 - this dn/dy replaces the previous
+!       dn/dx = a + b*x   where l = ln(r)
+!    the old dn/dx was overly complicated for cases of rmean near rlo or rhi
+!    the new dn/dy is consistent with that used in the movesect routine,
+!       which does continuous growth by condensation and aqueous chemistry
+!.......................................................................
+             do 25002 n = 1,ntype_aer
+             do 25000 m = 1,nsize_aer(n)
+
+! convert from diameter in cm to radius in m
+                rlo(m,n) = 0.5*0.01*dlo_sect(m,n)
+                rhi(m,n) = 0.5*0.01*dhi_sect(m,n)
+                ylo(m,n) = (rlo(m,n)/rhi(m,n))**3
+                yhi(m,n) = 1.0
+
+! 04-nov-2005 - extremely narrow bins will be treated using 0/1 activation
+!    this is to avoid potential numerical problems
+                bin_is_narrow(m,n) = .false.
+                if ((rhi(m,n)/rlo(m,n)) .le. 1.01) bin_is_narrow(m,n) = .true.
+
+! rmean is mass mean radius for the bin; xmean = log(rmean)
+! just use section midpoint if bin is empty
+                if ( bin_is_empty(m,n) ) then
+                   rmean(m,n) = sqrt(rlo(m,n)*rhi(m,n)) 
+                   ymean(m,n) = (rmean(m,n)/rhi(m,n))**3
+                   goto 25000
+                end if
+
+                rmean(m,n) = (volc(m,n)/(ccc*na(m,n)))**third
+                rmean(m,n) = max( rlo(m,n), min( rhi(m,n), rmean(m,n) ) )
+                ymean(m,n) = (rmean(m,n)/rhi(m,n))**3
+                if ( bin_is_narrow(m,n) ) goto 25000
+
+! if rmean is extremely close to either rlo or rhi, 
+! treat the bin as extremely narrow
+                if ((rhi(m,n)/rmean(m,n)) .le. 1.01) then
+                   bin_is_narrow(m,n) = .true.
+                   rlo(m,n) = min( rmean(m,n), (rhi(m,n)/1.01) )
+                   ylo(m,n) = (rlo(m,n)/rhi(m,n))**3
+                   goto 25000
+                else if ((rmean(m,n)/rlo(m,n)) .le. 1.01) then
+                   bin_is_narrow(m,n) = .true.
+                   rhi(m,n) = max( rmean(m,n), (rlo(m,n)*1.01) )
+                   ylo(m,n) = (rlo(m,n)/rhi(m,n))**3
+                   ymean(m,n) = (rmean(m,n)/rhi(m,n))**3
+                   goto 25000
+                endif
+
+! if rmean is somewhat close to either rlo or rhi, then dn/dy will be 
+!    negative near the upper or lower bin boundary
+! in these cases, assume that all the particles are in a subset of the full bin,
+!    and adjust rlo or rhi so that rmean will be near the center of this subset
+! note that the bin is made narrower LOCALLY/TEMPORARILY, 
+!    just for the purposes of the activation calculation
+                gammayy = (ymean(m,n)-ylo(m,n)) / (yhi(m,n)-ylo(m,n))
+                if (gammayy .lt. 0.34) then
+                   dumaa = ylo(m,n) + (yhi(m,n)-ylo(m,n))*(gammayy/0.34)
+                   rhi(m,n) = rhi(m,n)*(dumaa**third)
+                   ylo(m,n) = (rlo(m,n)/rhi(m,n))**3
+                   ymean(m,n) = (rmean(m,n)/rhi(m,n))**3
+                else if (gammayy .ge. 0.66) then
+                   dumaa = ylo(m,n) + (yhi(m,n)-ylo(m,n))*((gammayy-0.66)/0.34)
+                   ylo(m,n) = dumaa
+                   rlo(m,n) = rhi(m,n)*(dumaa**third)
+                end if
+                if ((rhi(m,n)/rlo(m,n)) .le. 1.01) then
+                   bin_is_narrow(m,n) = .true.
+                   goto 25000
+                end if
+
+                betayy = ylo(m,n)/yhi(m,n)
+                betayy2 = betayy*betayy
+                bsub(m,n) = (12.0*ymean(m,n) - 6.0*(1.0+betayy)) /   &
+                   (4.0*(1.0-betayy2*betayy) - 3.0*(1.0-betayy2)*(1.0+betayy))
+                asub(m,n) = (1.0 - bsub(m,n)*(1.0-betayy2)*0.5) / (1.0-betayy)
+
+                if ( asub(m,n)+bsub(m,n)*ylo(m,n) .lt. 0. ) then
+                  if (idiag_dndy_neg .gt. 0) then
+                    print *,'dndy<0 at lower boundary'
+                    print *,'n,m=',n,m
+                    print *,'na=',na(m,n),' volc=',volc(m,n)
+                    print *,'volc/(na*pi*4/3)=', (volc(m,n)/(na(m,n)*ccc))
+                    print *,'rlo(m,n),rhi(m,n)=',rlo(m,n),rhi(m,n)
+                    print *,'dlo_sect/2,dhi_sect/2=',   &
+                             (0.005*dlo_sect(m,n)),(0.005*dhi_sect(m,n))
+                    print *,'asub,bsub,ylo,yhi=',asub(m,n),bsub(m,n),ylo(m,n),yhi(m,n)
+                    print *,'asub+bsub*ylo=',   &
+                             (asub(m,n)+bsub(m,n)*ylo(m,n))
+                    print *,'subr activate error 11 - i,j,k =', ii, jj, kk
+                  endif
+                endif
+                if ( asub(m,n)+bsub(m,n)*yhi(m,n) .lt. 0. ) then
+                  if (idiag_dndy_neg .gt. 0) then
+                    print *,'dndy<0 at upper boundary'
+                    print *,'n,m=',n,m
+                    print *,'na=',na(m,n),' volc=',volc(m,n)
+                    print *,'volc/(na*pi*4/3)=', (volc(m,n)/(na(m,n)*ccc))
+                    print *,'rlo(m,n),rhi(m,n)=',rlo(m,n),rhi(m,n)
+                    print *,'dlo_sect/2,dhi_sect/2=',   &
+                             (0.005*dlo_sect(m,n)),(0.005*dhi_sect(m,n))
+                    print *,'asub,bsub,ylo,yhi=',asub(m,n),bsub(m,n),ylo(m,n),yhi(m,n)
+                    print *,'asub+bsub*yhi=',   &
+                             (asub(m,n)+bsub(m,n)*yhi(m,n))
+                    print *,'subr activate error 12 - i,j,k =', ii, jj, kk
+                  endif
+                endif
+
+25000        continue      ! m=1,nsize_aer(n)
+25002        continue      ! n=1,ntype_aer
+
+
+30000    continue
+!.......................................................................
+!
+!   end calc. of modal or sectional activation properties (end of section 1)
+!
+!.......................................................................
+
+
+
+!      sjg 7-16-98  upward
+!      print *,'wbar,sigw=',wbar,sigw
+
+      if(sigw.le.1.e-5) goto 50000
+
+!.......................................................................
+!
+!   start calc. of activation fractions/fluxes
+!   for spectrum of updrafts (start of section 2)
+!
+!.......................................................................
+         ipass_nwloop = 1
+         idiagaa = 0
+! 06-nov-2005 rce - set idiagaa=1 for testing/debugging
+!        if ((grid_id.eq.1) .and. (ktau.eq.167) .and.   &
+!            (ii.eq.24) .and. (jj.eq. 1) .and. (kk.eq.14)) idiagaa = 1
+
+40000    continue
+         if(top)then
+           wmax=0.
+           wmin=min(zero,-wdiab)
+         else
+           wmax=min(wmaxf,wbar+sds*sigw)
+           wmin=max(wminf,-wdiab)
+         endif
+         wmin=max(wmin,wbar-sds*sigw)
+         w=wmin
+         dwmax=eps*sigw
+         dw=dwmax
+         dfmax=0.2
+         dfmin=0.1
+         if(wmax.le.w)then
+            do n=1,ntype_aer
+            do m=1,nsize_aer(n)
+               fluxn(m,n)=0.
+               fn(m,n)=0.
+               fluxs(m,n)=0.
+               fs(m,n)=0.
+               fluxm(m,n)=0.
+               fm(m,n)=0.
+            end do
+            end do
+            flux_fullact=0.
+            return
+         endif
+         do n=1,ntype_aer
+         do m=1,nsize_aer(n)
+            sumflxn(m,n)=0.
+            sumfn(m,n)=0.
+            fnold(m,n)=0.
+            sumflxs(m,n)=0.
+            sumfs(m,n)=0.
+            fsold(m,n)=0.
+            sumflxm(m,n)=0.
+            sumfm(m,n)=0.
+            fmold(m,n)=0.
+         enddo
+         enddo
+         sumflx_fullact=0.
+
+         fold=0
+         gold=0
+! 06-nov-2005 rce - set wold=w here
+!        wold=0
+         wold=w
+
+
+! 06-nov-2005 rce - define nwmax; calc dwmin from nwmax
+         nwmax = 200
+!        dwmin = min( dwmax, 0.01 )
+         dwmin = (wmax - wmin)/(nwmax-1)
+         dwmin = min( dwmax, dwmin )
+         dwmin = max( 0.01,  dwmin )
+
+!
+! loop over updrafts, incrementing sums as you go
+! the "200" is (arbitrary) upper limit for number of updrafts
+! if integration finishes before this, OK; otherwise, ERROR
+!
+         if (idiagaa.gt.0) then
+             write(*,94700) ktau, grid_id, ii, jj, kk, nwmax
+             write(*,94710) 'wbar,sigw,wdiab=', wbar, sigw, wdiab
+             write(*,94710) 'wmin,wmax,dwmin,dwmax=', wmin, wmax, dwmin, dwmax
+             write(*,94720) -1, w, wold, dw
+         end if
+94700    format( / 'activate 47000 - ktau,id,ii,jj,kk,nwmax=', 6i5 )
+94710    format( 'activate 47000 - ', a, 6(1x,f11.5) )
+94720    format( 'activate 47000 - nw,w,wold,dw=', i5, 3(1x,f11.5) )
+
+         do 47000 nw = 1, nwmax
+41000       wnuc=w+wdiab
+            WRITE( msg,* ) 'integrate w wnuc: ', wnuc
+            CALL wrf_debug ( 15 , TRIM(msg) )
+            if (idiagaa.gt.0) write(*,94720) nw, w, wold, dw
+
+!           write(6,*)'wnuc=',wnuc
+            alw=alpha*wnuc
+            sqrtalw=sqrt(alw)
+            zeta=2.*sqrtalw*aten/(3.*sqrtg)
+            etafactor1=2.*alw*sqrtalw
+            if (isectional .gt. 0) then
+!              sectional model.
+!              use bulk properties
+
+              do n=1,ntype_aer
+                 if(totn(n).gt.1.e-10)then
+                    eta(1,n)=etafactor1/(totn(n)*beta*sqrtg)
+                 else
+                    eta(1,n)=1.e10
+                 endif
+              enddo
+              !BSINGH - For WRFCuP scheme
+              ! use smax_prescribed if it is present; otherwise get smax from subr maxsat
+              if ( present( smax_prescribed ) ) then
+                 smax = smax_prescribed
+              else
+                 !BSINGH -ENDS
+                 
+                 call maxsat(zeta,eta,maxd_atype,ntype_aer, &
+                      maxd_asize,(/1/),gmsm,gmlnsig,f1,smax)
+              endif
+              lnsmax=log(smax)
+              x=2*(log(gmsm(1))-lnsmax)/(3*sq2*gmlnsig(1))
+              fnew=0.5*(1.-ERF_ALT(x))
+
+            else
+
+              do n=1,ntype_aer
+              do m=1,nsize_aer(n)
+                 eta(m,n)=etafactor1*etafactor2(m,n)
+              enddo
+              enddo
+              !BSINGH - For WRFCuP scheme
+              if ( present( smax_prescribed ) ) then
+                 smax = smax_prescribed
+              else
+                 !BSINGH -ENDS
+                 call maxsat(zeta,eta,maxd_atype,ntype_aer, &
+                      maxd_asize,nsize_aer,sm,alnsign,f1,smax)
+              endif
+!             write(6,*)'w,smax=',w,smax
+
+              lnsmax=log(smax)
+
+              x=2*(lnsm(nsize_aer(1),1)-lnsmax)/(3*sq2*alnsign(nsize_aer(1),1))
+              fnew=0.5*(1.-ERF_ALT(x))
+
+            endif
+
+            dwnew = dw
+! 06-nov-2005 rce - "n" here should be "nw" (?) 
+!           if(fnew-fold.gt.dfmax.and.n.gt.1)then
+            if(fnew-fold.gt.dfmax.and.nw.gt.1)then
+!              reduce updraft increment for greater accuracy in integration
+               if (dw .gt. 1.01*dwmin) then
+                  dw=0.7*dw
+                  dw=max(dw,dwmin)
+                  w=wold+dw
+                  go to 41000
+               else
+                  dwnew = dwmin
+               endif
+            endif
+
+            if(fnew-fold.lt.dfmin)then
+!              increase updraft increment to accelerate integration
+               dwnew=min(1.5*dw,dwmax)
+            endif
+            fold=fnew
+
+            z=(w-wbar)/(sigw*sq2)
+            gaus=exp(-z*z)
+            fnmin=1.
+            xmincoeff=alogaten-2.*third*(lnsmax-alog2)-alog3
+!           write(6,*)'xmincoeff=',xmincoeff
+
+
+            do 44002 n=1,ntype_aer
+            do 44000 m=1,nsize_aer(n)
+               if ( bin_is_empty(m,n) ) then
+                   fn(m,n)=0.
+                   fs(m,n)=0.
+                   fm(m,n)=0.
+               else if ((isectional .eq. 2) .or. (isectional .eq. 4)) then
+!                 sectional
+!                  within-section dn/dx = a + b*x
+                  xcut=xmincoeff-third*lnhygro(m,n)
+!                 ycut=(exp(xcut)/rhi(m,n))**3
+! 07-jul-2006 rce - the above line gave a (rare) overflow when smax=1.0e-20
+! if (ycut > yhi), then actual value of ycut is unimportant, 
+! so do the following to avoid overflow
+                  lnycut = 3.0 * ( xcut - log(rhi(m,n)) )
+                  lnycut = min( lnycut, log(yhi(m,n)*1.0e5) )
+                  ycut=exp(lnycut)
+!                 write(6,*)'m,n,rcut,rlo,rhi=',m,n,exp(xcut),rlo(m,n),rhi(m,n)
+!                   if(lnsmax.lt.lnsmn(m,n))then
+                  if(ycut.gt.yhi(m,n))then
+                     fn(m,n)=0.
+                     fs(m,n)=0.
+                     fm(m,n)=0.
+                  elseif(ycut.lt.ylo(m,n))then
+                     fn(m,n)=1.
+                     fs(m,n)=1.
+                     fm(m,n)=1.
+                  elseif ( bin_is_narrow(m,n) ) then
+! 04-nov-2005 rce - for extremely narrow bins, 
+! do zero activation if xcut>xmean, 100% activation otherwise
+                     if (ycut.gt.ymean(m,n)) then
+                        fn(m,n)=0.
+                        fs(m,n)=0.
+                        fm(m,n)=0.
+                     else
+                        fn(m,n)=1.
+                        fs(m,n)=1.
+                        fm(m,n)=1.
+                     endif
+                  else
+                     phiyy=ycut/yhi(m,n)
+                     fn(m,n) = asub(m,n)*(1.0-phiyy) + 0.5*bsub(m,n)*(1.0-phiyy*phiyy)
+                     if (fn(m,n).lt.zero .or. fn(m,n).gt.one) then
+                      if (idiag_fnsm_prob .gt. 0) then
+                        print *,'fn(',m,n,')=',fn(m,n),' outside 0,1 - activate err21'
+                        print *,'na,volc       =', na(m,n), volc(m,n)
+                        print *,'asub,bsub     =', asub(m,n), bsub(m,n)
+                        print *,'yhi,ycut      =', yhi(m,n), ycut
+                      endif
+                     endif
+
+                     if (fn(m,n) .le. zero) then
+! 10-nov-2005 rce - if fn=0, then fs & fm must be 0
+                        fn(m,n)=zero
+                        fs(m,n)=zero
+                        fm(m,n)=zero
+                     else if (fn(m,n) .ge. one) then
+! 10-nov-2005 rce - if fn=1, then fs & fm must be 1
+                        fn(m,n)=one
+                        fs(m,n)=one
+                        fm(m,n)=one
+                     else
+! 10-nov-2005 rce - otherwise, calc fm and check it
+                        fm(m,n) = (yhi(m,n)/ymean(m,n)) * (0.5*asub(m,n)*(1.0-phiyy*phiyy) +   &
+                                  third*bsub(m,n)*(1.0-phiyy*phiyy*phiyy))
+                        if (fm(m,n).lt.fn(m,n) .or. fm(m,n).gt.one) then
+                         if (idiag_fnsm_prob .gt. 0) then
+                           print *,'fm(',m,n,')=',fm(m,n),' outside fn,1 - activate err22'
+                           print *,'na,volc,fn    =', na(m,n), volc(m,n), fn(m,n)
+                           print *,'asub,bsub     =', asub(m,n), bsub(m,n)
+                           print *,'yhi,ycut     =', yhi(m,n), ycut
+                         endif
+                        endif
+                        if (fm(m,n) .le. fn(m,n)) then
+! 10-nov-2005 rce - if fm=fn, then fs must =fn
+                           fm(m,n)=fn(m,n)
+                           fs(m,n)=fn(m,n)
+                        else if (fm(m,n) .ge. one) then
+! 10-nov-2005 rce - if fm=1, then fs & fn must be 1
+                           fm(m,n)=one
+                           fs(m,n)=one
+                           fn(m,n)=one
+                        else
+! 10-nov-2005 rce - these two checks assure that the mean size
+! of the activated & interstitial particles will be between rlo & rhi
+                           dumaa = fn(m,n)*(yhi(m,n)/ymean(m,n)) 
+                           fm(m,n) = min( fm(m,n), dumaa )
+                           dumaa = 1.0 + (fn(m,n)-1.0)*(ylo(m,n)/ymean(m,n)) 
+                           fm(m,n) = min( fm(m,n), dumaa )
+! 10-nov-2005 rce - now calculate fs and bound it by fn, fm
+                           betayy = ylo(m,n)/yhi(m,n)
+                           dumaa = phiyy**twothird
+                           dumbb = betayy**twothird
+                           fs(m,n) =   &
+                              (asub(m,n)*(1.0-phiyy*dumaa) +   &
+                                  0.625*bsub(m,n)*(1.0-phiyy*phiyy*dumaa)) /   &
+                              (asub(m,n)*(1.0-betayy*dumbb) +   &
+                                  0.625*bsub(m,n)*(1.0-betayy*betayy*dumbb))
+                           fs(m,n)=max(fs(m,n),fn(m,n))
+                           fs(m,n)=min(fs(m,n),fm(m,n))
+                        endif
+                     endif
+                  endif
+
+               else
+!                 modal
+                  x=2*(lnsm(m,n)-lnsmax)/(3*sq2*alnsign(m,n))
+                  fn(m,n)=0.5*(1.-ERF_ALT(x))
+                  arg=x-sq2*alnsign(m,n)
+                  fs(m,n)=0.5*(1.-ERF_ALT(arg))
+                  arg=x-1.5*sq2*alnsign(m,n)
+                  fm(m,n)=0.5*(1.-ERF_ALT(arg))
+!                 print *,'w,x,fn,fs,fm=',w,x,fn(m,n),fs(m,n),fm(m,n)
+               endif
+
+!                     fn(m,n)=1.  !test
+!                     fs(m,n)=1.
+!                     fm(m,n)=1.
+               fnmin=min(fn(m,n),fnmin)
+!               integration is second order accurate
+!               assumes linear variation of f*gaus with w
+               wb=(w+wold)
+               fnbar=(fn(m,n)*gaus+fnold(m,n)*gold)
+               fsbar=(fs(m,n)*gaus+fsold(m,n)*gold)
+               fmbar=(fm(m,n)*gaus+fmold(m,n)*gold)
+               if((top.and.w.lt.0.).or.(.not.top.and.w.gt.0.))then
+                  sumflxn(m,n)=sumflxn(m,n)+sixth*(wb*fnbar           &
+                      +(fn(m,n)*gaus*w+fnold(m,n)*gold*wold))*dw
+                  sumflxs(m,n)=sumflxs(m,n)+sixth*(wb*fsbar           &
+                      +(fs(m,n)*gaus*w+fsold(m,n)*gold*wold))*dw
+                  sumflxm(m,n)=sumflxm(m,n)+sixth*(wb*fmbar           &
+                      +(fm(m,n)*gaus*w+fmold(m,n)*gold*wold))*dw
+               endif
+               sumfn(m,n)=sumfn(m,n)+0.5*fnbar*dw
+!              write(6,'(a,9g10.2)')'lnsmax,lnsm(m,n),x,fn(m,n),fnold(m,n),g,gold,fnbar,dw=', &
+!                lnsmax,lnsm(m,n),x,fn(m,n),fnold(m,n),g,gold,fnbar,dw
+               fnold(m,n)=fn(m,n)
+               sumfs(m,n)=sumfs(m,n)+0.5*fsbar*dw
+               fsold(m,n)=fs(m,n)
+               sumfm(m,n)=sumfm(m,n)+0.5*fmbar*dw
+               fmold(m,n)=fm(m,n)
+
+44000       continue      ! m=1,nsize_aer(n)
+44002       continue      ! n=1,ntype_aer
+
+!           same form as sumflxm(m,n) but replace the fm/fmold(m,n) with 1.0
+            sumflx_fullact = sumflx_fullact &
+                           + sixth*(wb*(gaus+gold) + (gaus*w + gold*wold))*dw
+!            sumg=sumg+0.5*(gaus+gold)*dw
+            gold=gaus
+            wold=w
+            dw=dwnew
+
+            if(nw.gt.1.and.(w.gt.wmax.or.fnmin.gt.fmax))go to 48000
+            w=w+dw
+
+47000    continue      ! nw = 1, nwmax
+
+
+         print *,'do loop is too short in activate'
+         print *,'wmin=',wmin,' w=',w,' wmax=',wmax,' dw=',dw
+         print *,'wbar=',wbar,' sigw=',sigw,' wdiab=',wdiab
+         print *,'wnuc=',wnuc
+         do n=1,ntype_aer
+            print *,'ntype=',n
+            print *,'na=',(na(m,n),m=1,nsize_aer(n))
+            print *,'fn=',(fn(m,n),m=1,nsize_aer(n))
+         end do
+!   dump all subr parameters to allow testing with standalone code
+!   (build a driver that will read input and call activate)
+         print *,'top,wbar,sigw,wdiab,tair,rhoair,ntype_aer='
+         print *, top,wbar,sigw,wdiab,tair,rhoair,ntype_aer
+         print *,'na='
+         print *, na
+         print *,'volc='
+         print *, volc
+         print *,'sigman='
+         print *, sigman
+         print *,'hygro='
+         print *, hygro
+
+         print *,'subr activate error 31 - i,j,k =', ii, jj, kk
+! 06-nov-2005 rce - if integration fails, repeat it once with additional diagnostics
+         if (ipass_nwloop .eq. 1) then
+             ipass_nwloop = 2
+             idiagaa = 2
+             goto 40000
+         end if
+         call wrf_error_fatal("STOP: activate before 48000")
+
+48000    continue
+
+
+!         ndist(n)=ndist(n)+1
+         if(.not.top.and.w.lt.wmaxf)then
+
+!            contribution from all updrafts stronger than wmax
+!            assuming constant f (close to fmax)
+            wnuc=w+wdiab
+
+            z1=(w-wbar)/(sigw*sq2)
+            z2=(wmaxf-wbar)/(sigw*sq2)
+            integ=sigw*0.5*sq2*sqpi*(ERFC_NUM_RECIPES(z1)-ERFC_NUM_RECIPES(z2))
+!            consider only upward flow into cloud base when estimating flux
+            wf1=max(w,zero)
+            zf1=(wf1-wbar)/(sigw*sq2)
+            gf1=exp(-zf1*zf1)
+            wf2=max(wmaxf,zero)
+            zf2=(wf2-wbar)/(sigw*sq2)
+            gf2=exp(-zf2*zf2)
+            gf=(gf1-gf2)
+            integf=wbar*sigw*0.5*sq2*sqpi*(ERFC_NUM_RECIPES(zf1)-ERFC_NUM_RECIPES(zf2))+sigw*sigw*gf
+
+            do n=1,ntype_aer
+            do m=1,nsize_aer(n)
+               sumflxn(m,n)=sumflxn(m,n)+integf*fn(m,n)
+               sumfn(m,n)=sumfn(m,n)+fn(m,n)*integ
+               sumflxs(m,n)=sumflxs(m,n)+integf*fs(m,n)
+               sumfs(m,n)=sumfs(m,n)+fs(m,n)*integ
+               sumflxm(m,n)=sumflxm(m,n)+integf*fm(m,n)
+               sumfm(m,n)=sumfm(m,n)+fm(m,n)*integ
+            end do
+            end do
+!           same form as sumflxm(m,n) but replace the fm(m,n) with 1.0
+            sumflx_fullact = sumflx_fullact + integf
+!            sumg=sumg+integ
+         endif
+
+
+         do n=1,ntype_aer
+         do m=1,nsize_aer(n)
+
+!           fn(m,n)=sumfn(m,n)/(sumg)
+            fn(m,n)=sumfn(m,n)/(sq2*sqpi*sigw)
+            fluxn(m,n)=sumflxn(m,n)/(sq2*sqpi*sigw)
+            if(fn(m,n).gt.1.01)then
+             if (idiag_fnsm_prob .gt. 0) then
+               print *,'fn=',fn(m,n),' > 1 - activate err41'
+               print *,'w,m,n,na,am=',w,m,n,na(m,n),am(m,n)
+               print *,'integ,sumfn,sigw=',integ,sumfn(m,n),sigw
+               print *,'subr activate error - i,j,k =', ii, jj, kk
+             endif
+             fluxn(m,n) = fluxn(m,n)/fn(m,n)
+            endif
+
+            fs(m,n)=sumfs(m,n)/(sq2*sqpi*sigw)
+            fluxs(m,n)=sumflxs(m,n)/(sq2*sqpi*sigw)
+            if(fs(m,n).gt.1.01)then
+             if (idiag_fnsm_prob .gt. 0) then
+               print *,'fs=',fs(m,n),' > 1 - activate err42'
+               print *,'m,n,isectional=',m,n,isectional
+               print *,'alnsign(m,n)=',alnsign(m,n)
+               print *,'rcut,rlo(m,n),rhi(m,n)',exp(xcut),rlo(m,n),rhi(m,n)
+               print *,'w,m,na,am=',w,m,na(m,n),am(m,n)
+               print *,'integ,sumfs,sigw=',integ,sumfs(m,n),sigw
+             endif
+             fluxs(m,n) = fluxs(m,n)/fs(m,n)
+            endif
+
+!           fm(m,n)=sumfm(m,n)/(sumg)
+            fm(m,n)=sumfm(m,n)/(sq2*sqpi*sigw)
+            fluxm(m,n)=sumflxm(m,n)/(sq2*sqpi*sigw)
+            if(fm(m,n).gt.1.01)then
+             if (idiag_fnsm_prob .gt. 0) then
+               print *,'fm(',m,n,')=',fm(m,n),' > 1 - activate err43'
+             endif
+             fluxm(m,n) = fluxm(m,n)/fm(m,n)
+            endif
+
+         end do
+         end do
+!        same form as fluxm(m,n)
+         flux_fullact = sumflx_fullact/(sq2*sqpi*sigw)
+
+      goto 60000
+!.......................................................................
+!
+!   end calc. of activation fractions/fluxes
+!   for spectrum of updrafts (end of section 2)
+!
+!.......................................................................
+
+!.......................................................................
+!
+!   start calc. of activation fractions/fluxes
+!   for (single) uniform updraft (start of section 3)
+!
+!.......................................................................
+50000 continue
+
+         wnuc=wbar+wdiab
+!         write(6,*)'uniform updraft =',wnuc
+
+! 04-nov-2005 rce - moved the code for "wnuc.le.0" code to here
+         if(wnuc.le.0.)then
+            do n=1,ntype_aer
+            do m=1,nsize_aer(n)
+               fn(m,n)=0
+               fluxn(m,n)=0
+               fs(m,n)=0
+               fluxs(m,n)=0
+               fm(m,n)=0
+               fluxm(m,n)=0
+            end do
+            end do
+            flux_fullact=0.
+            return
+         endif
+
+            w=wbar
+            alw=alpha*wnuc
+            sqrtalw=sqrt(alw)
+            zeta=2.*sqrtalw*aten/(3.*sqrtg)
+
+            if (isectional .gt. 0) then
+!              sectional model.
+!              use bulk properties
+              do n=1,ntype_aer
+              if(totn(n).gt.1.e-10)then
+                 eta(1,n)=2*alw*sqrtalw/(totn(n)*beta*sqrtg)
+              else
+                 eta(1,n)=1.e10
+              endif
+              end do
+              !BSINGH - For WRFCuP
+              ! use smax_prescribed if it is present; otherwise get smax from subr maxsat
+              if ( present( smax_prescribed ) ) then
+                 smax = smax_prescribed
+              else
+                 !BSINGH -ENDS
+                 call maxsat(zeta,eta,maxd_atype,ntype_aer, &
+                      maxd_asize,(/1/),gmsm,gmlnsig,f1,smax)
+              endif
+
+            else
+
+              do n=1,ntype_aer
+              do m=1,nsize_aer(n)
+                 if(na(m,n).gt.1.e-10)then
+                    eta(m,n)=2*alw*sqrtalw/(na(m,n)*beta*sqrtg)
+                 else
+                    eta(m,n)=1.e10
+                 endif
+              end do
+              end do
+              !BSINGH - For WRFCuP
+              ! use smax_prescribed if it is present; otherwise get smax from subr maxsat
+              if ( present( smax_prescribed ) ) then
+                 smax = smax_prescribed
+              else
+                 !BSINGH -ENDS
+                 
+                 call maxsat(zeta,eta,maxd_atype,ntype_aer, &
+                      maxd_asize,nsize_aer,sm,alnsign,f1,smax)
+              endif
+
+            endif
+
+            lnsmax=log(smax)
+            xmincoeff=alogaten-2.*third*(lnsmax-alog2)-alog3
+
+            do 55002 n=1,ntype_aer
+            do 55000 m=1,nsize_aer(n)
+
+! 04-nov-2005 rce - check for bin_is_empty here too, just like earlier
+               if ( bin_is_empty(m,n) ) then
+                   fn(m,n)=0.
+                   fs(m,n)=0.
+                   fm(m,n)=0.
+
+               else if ((isectional .eq. 2) .or. (isectional .eq. 4)) then
+!                 sectional
+!                  within-section dn/dx = a + b*x
+                  xcut=xmincoeff-third*lnhygro(m,n)
+!                 ycut=(exp(xcut)/rhi(m,n))**3
+! 07-jul-2006 rce - the above line gave a (rare) overflow when smax=1.0e-20
+! if (ycut > yhi), then actual value of ycut is unimportant, 
+! so do the following to avoid overflow
+                  lnycut = 3.0 * ( xcut - log(rhi(m,n)) )
+                  lnycut = min( lnycut, log(yhi(m,n)*1.0e5) )
+                  ycut=exp(lnycut)
+!                 write(6,*)'m,n,rcut,rlo,rhi=',m,n,exp(xcut),rlo(m,n),rhi(m,n)
+!                   if(lnsmax.lt.lnsmn(m,n))then
+                  if(ycut.gt.yhi(m,n))then
+                     fn(m,n)=0.
+                     fs(m,n)=0.
+                     fm(m,n)=0.
+!                   elseif(lnsmax.gt.lnsmx(m,n))then
+                  elseif(ycut.lt.ylo(m,n))then
+                     fn(m,n)=1.
+                     fs(m,n)=1.
+                     fm(m,n)=1.
+                  elseif ( bin_is_narrow(m,n) ) then
+! 04-nov-2005 rce - for extremely narrow bins, 
+! do zero activation if xcut>xmean, 100% activation otherwise
+                     if (ycut.gt.ymean(m,n)) then
+                        fn(m,n)=0.
+                        fs(m,n)=0.
+                        fm(m,n)=0.
+                     else
+                        fn(m,n)=1.
+                        fs(m,n)=1.
+                        fm(m,n)=1.
+                     endif
+                  else
+                     phiyy=ycut/yhi(m,n)
+                     fn(m,n) = asub(m,n)*(1.0-phiyy) + 0.5*bsub(m,n)*(1.0-phiyy*phiyy)
+                     if (fn(m,n).lt.zero .or. fn(m,n).gt.one) then
+                      if (idiag_fnsm_prob .gt. 0) then
+                        print *,'fn(',m,n,')=',fn(m,n),' outside 0,1 - activate err21'
+                        print *,'na,volc       =', na(m,n), volc(m,n)
+                        print *,'asub,bsub     =', asub(m,n), bsub(m,n)
+                        print *,'yhi,ycut      =', yhi(m,n), ycut
+                      endif
+                     endif
+
+                     if (fn(m,n) .le. zero) then
+! 10-nov-2005 rce - if fn=0, then fs & fm must be 0
+                        fn(m,n)=zero
+                        fs(m,n)=zero
+                        fm(m,n)=zero
+                     else if (fn(m,n) .ge. one) then
+! 10-nov-2005 rce - if fn=1, then fs & fm must be 1
+                        fn(m,n)=one
+                        fs(m,n)=one
+                        fm(m,n)=one
+                     else
+! 10-nov-2005 rce - otherwise, calc fm and check it
+                        fm(m,n) = (yhi(m,n)/ymean(m,n)) * (0.5*asub(m,n)*(1.0-phiyy*phiyy) +   &
+                                  third*bsub(m,n)*(1.0-phiyy*phiyy*phiyy))
+                        if (fm(m,n).lt.fn(m,n) .or. fm(m,n).gt.one) then
+                         if (idiag_fnsm_prob .gt. 0) then
+                           print *,'fm(',m,n,')=',fm(m,n),' outside fn,1 - activate err22'
+                           print *,'na,volc,fn    =', na(m,n), volc(m,n), fn(m,n)
+                           print *,'asub,bsub     =', asub(m,n), bsub(m,n)
+                           print *,'yhi,ycut      =', yhi(m,n), ycut
+                         endif
+                        endif
+                        if (fm(m,n) .le. fn(m,n)) then
+! 10-nov-2005 rce - if fm=fn, then fs must =fn
+                           fm(m,n)=fn(m,n)
+                           fs(m,n)=fn(m,n)
+                        else if (fm(m,n) .ge. one) then
+! 10-nov-2005 rce - if fm=1, then fs & fn must be 1
+                           fm(m,n)=one
+                           fs(m,n)=one
+                           fn(m,n)=one
+                        else
+! 10-nov-2005 rce - these two checks assure that the mean size
+! of the activated & interstitial particles will be between rlo & rhi
+                           dumaa = fn(m,n)*(yhi(m,n)/ymean(m,n)) 
+                           fm(m,n) = min( fm(m,n), dumaa )
+                           dumaa = 1.0 + (fn(m,n)-1.0)*(ylo(m,n)/ymean(m,n))
+                           fm(m,n) = min( fm(m,n), dumaa )
+! 10-nov-2005 rce - now calculate fs and bound it by fn, fm
+                           betayy = ylo(m,n)/yhi(m,n)
+                           dumaa = phiyy**twothird
+                           dumbb = betayy**twothird
+                           fs(m,n) =   &
+                              (asub(m,n)*(1.0-phiyy*dumaa) +   &
+                                  0.625*bsub(m,n)*(1.0-phiyy*phiyy*dumaa)) /   &
+                              (asub(m,n)*(1.0-betayy*dumbb) +   &
+                                  0.625*bsub(m,n)*(1.0-betayy*betayy*dumbb))
+                           fs(m,n)=max(fs(m,n),fn(m,n))
+                           fs(m,n)=min(fs(m,n),fm(m,n))
+                        endif
+                     endif
+
+                  endif
+
+               else
+!                 modal
+                  x=2*(lnsm(m,n)-lnsmax)/(3*sq2*alnsign(m,n))
+                  fn(m,n)=0.5*(1.-ERF_ALT(x))
+                  arg=x-sq2*alnsign(m,n)
+                  fs(m,n)=0.5*(1.-ERF_ALT(arg))
+                  arg=x-1.5*sq2*alnsign(m,n)
+                  fm(m,n)=0.5*(1.-ERF_ALT(arg))
+               endif
+
+!                     fn(m,n)=1. ! test
+!                     fs(m,n)=1.
+!                     fm(m,n)=1.
+                if((top.and.wbar.lt.0.).or.(.not.top.and.wbar.gt.0.))then
+                   fluxn(m,n)=fn(m,n)*w
+                   fluxs(m,n)=fs(m,n)*w
+                   fluxm(m,n)=fm(m,n)*w
+                else
+                   fluxn(m,n)=0
+                   fluxs(m,n)=0
+                   fluxm(m,n)=0
+               endif
+
+55000       continue      ! m=1,nsize_aer(n)
+55002       continue      ! n=1,ntype_aer
+
+            if((top.and.wbar.lt.0.).or.(.not.top.and.wbar.gt.0.))then
+               flux_fullact = w
+            else
+               flux_fullact = 0.0
+            endif
+
+! 04-nov-2005 rce - moved the code for "wnuc.le.0" from here 
+! to near the start the uniform undraft section
+
+!.......................................................................
+!
+!   end calc. of activation fractions/fluxes 
+!   for (single) uniform updraft (end of section 3)
+!
+!.......................................................................
+
+
+
+60000 continue
+
+
+
+! Liran add ML start ====================================
+! Host buffers are SAVEd statics now -- no allocate/deallocate cycle per call.
+input_array  = 0.0_real32
+output_array = 0.0_real32
+
+! ---- one-time setup: load the model, then bind the tensors to the buffers ----
+   if (.not. model_loaded) then
+        ! Load model on CPU (use enum, not string)
+         CALL wrf_debug(15,'Load model on CPU 00')
+         call torch_model_load( ml_model, &
+            '/scratch/07088/tg863871/Perlm_Backup/WRF_stam3_ml_mixout_bce_lr1e-4_cosine_more_fix/ml_models/mlp_wrapper.pt', &
+            device_type = torch_kCPU, device_index = 0 )
+         model_loaded = .true.
+         CALL wrf_debug(15,'ML activation model loaded successfully')
+   end if
+
+   if (.not. tensors_ready) then
+        ! Bind ONCE. in_t(1)/out_t(1) wrap the SAVEd host buffers, so
+        ! torch_model_forward writes straight back into output_array every call.
+         call torch_tensor_from_array_real32_2d_default_layout( &
+            in_t(1),  input_array,  torch_kCPU, requires_grad=.false. )
+         call torch_tensor_from_array_real32_2d_default_layout( &
+            out_t(1), output_array, torch_kCPU, requires_grad=.false. )
+         tensors_ready = .true.
+         CALL wrf_debug(15,'FTorch tensors bound to persistent host buffers')
+   end if
+
+   ! Was `else` here, so the call that loaded the model skipped inference and
+   ! returned the ARG fn instead. Inference is now unconditional.
+   if (model_loaded) then
+         idx = 1
+         input_array(1,idx) = tair;              idx = idx + 1
+         input_array(1,idx) = pres/100;          idx = idx + 1
+         q = qv/(1.0+qv)
+         input_array(1,idx) = rh_ml*100;         idx = idx + 1
+         input_array(1,idx) = wbar*100;          idx = idx + 1
+         do n=1,2; do m=1,2; input_array(1,idx) = na(m,n)*1e-6;    idx = idx + 1; end do; end do
+         do n=1,2; do m=1,2
+            if (na(m,n) > 0.0) then
+               input_array(1,idx) = real(exp(-1.5*alnsign(m,n)*alnsign(m,n))* (3.*volc(m,n)/(4.*pi*na(m,n)))**third*1e6, kind=real32 )
+            else
+               input_array(1,idx) = 0.0_real32
+            end if
+            idx = idx + 1
+         end do; end do
+         do n=1,2; do m=1,2
+            WRITE( msg,* ) 'dlo_sect(m,n)= ', dlo_sect(m,n)
+            CALL wrf_debug ( 15 , TRIM(msg) )
+            WRITE( msg,* ) 'dhi_sect(m,n)= ', dhi_sect(m,n)
+            CALL wrf_debug ( 15 , TRIM(msg) )
+         end do; end do
+
+         do n=1,2; do m=1,2; input_array(1,idx) = hygro(m,n); idx = idx + 1; end do; end do
+         idx = 1
+         do n=1,2; do m=1,2; output_array(1,idx) = 0.0; idx = idx + 1; end do; end do
+
+         ! ---------------------------------------------------------------------
+         ! NOTE: the Aitken/Accumulation mode-slot swap below has been DISABLED.
+         ! The emulator (mlp_wrapper.pt) was trained in WRF-native order, i.e.
+         ! slot0 = Aitken (m=1, FN11), slot1 = Accum (m=2, FN21), which is exactly
+         ! the order this routine builds above (idx5/9/13 = m=1 = Aitken). Swapping
+         ! the input slots (and the outputs below) fed the emulator out-of-order
+         ! and collapsed inline skill (verified R^2: no-swap 0.998/0.999 vs swap
+         ! -7.3/-1.2 on real WRF samples). Keep inputs in native order.
+         ! ---------------------------------------------------------------------
+         ! ! 9 <-> 10
+         ! tmp_swap            = input_array(1,9)
+         ! input_array(1,9)    = input_array(1,10)
+         ! input_array(1,10)   = tmp_swap
+         !
+         ! ! 5 <-> 6
+         ! tmp_swap            = input_array(1,5)
+         ! input_array(1,5)    = input_array(1,6)
+         ! input_array(1,6)    = tmp_swap
+         !
+         ! ! 13 <-> 14
+         ! tmp_swap            = input_array(1,13)
+         ! input_array(1,13)   = input_array(1,14)
+         ! input_array(1,14)   = tmp_swap
+
+         ! Rank-2 shapes (features, batch)
+         in_shape  = [ int(in_dim,  c_int), 1_c_int ]
+         out_shape = [ int(out_dim, c_int), 1_c_int ]
+
+         WRITE( msg,* ) 'tair: ', tair
+         CALL wrf_debug ( 15 , TRIM(msg) )
+         WRITE( msg,* ) 'pres: ', pres
+         CALL wrf_debug ( 15 , TRIM(msg) )
+         WRITE( msg,* ) 'pressure: ', pressure
+         CALL wrf_debug ( 15 , TRIM(msg) )
+         WRITE( msg,* ) 'qv/qs: ', qv/qs
+         CALL wrf_debug ( 15 , TRIM(msg) )
+         WRITE( msg,* ) 'wbar: ', wbar
+         CALL wrf_debug ( 15 , TRIM(msg) )
+
+         WRITE(msg,*) 'sigw=', sigw
+         CALL wrf_debug(15, TRIM(msg))
+
+         dev_idx   = int(0, kind=c_int)
+         ! in_t(1) is already bound to input_array in the one-time setup block
+         ! above and stays valid for the whole run. Re-wrapping it here (as the
+         ! previous version did, once per call) created and finalized a tensor
+         ! on every single call -- the double-free -- and was also pure overhead
+         ! since the tensor only stores a pointer to this same buffer.
+         CALL wrf_debug(15,'in_t(1) reused (bound at setup)')
+         ! Forward expects arrays-of-tensors, even for single in/out
+         WRITE(msg,*) 'tin shape = ', in_shape(1), ' x ', in_shape(2)
+         CALL wrf_debug(15, TRIM(msg))
+         WRITE(msg,*) 'input_array(1,1)=tair (K)=', input_array(1,1)
+         CALL wrf_debug(15, TRIM(msg))
+         WRITE(msg,*) 'input_array(2,1)=pressure (hPa)=', input_array(2,1)
+         CALL wrf_debug(15, TRIM(msg))
+         WRITE(msg,*) 'input_array(3,1)=RH (%)=', input_array(3,1)
+         CALL wrf_debug(15, TRIM(msg))
+         WRITE(msg,*) 'input_array(4,1)=wbar (cm/s)=', input_array(4,1)
+         CALL wrf_debug(15, TRIM(msg))
+         WRITE(msg,*) 'input_array(5,1)=na (#/cm3)=', input_array(5,1)
+         CALL wrf_debug(15, TRIM(msg))
+         WRITE(msg,*) 'input_array(6,1)=na (#/cm3)=', input_array(6,1)
+         CALL wrf_debug(15, TRIM(msg))
+         WRITE(msg,*) 'input_array(7,1)=na (#/cm3)=', input_array(7,1)
+         CALL wrf_debug(15, TRIM(msg))
+         WRITE(msg,*) 'input_array(8,1)=na (#/cm3)=', input_array(8,1)
+         CALL wrf_debug(15, TRIM(msg))
+         WRITE(msg,*) 'input_array(9,1)=rmean (um)=', input_array(9,1)
+         CALL wrf_debug(15, TRIM(msg))
+         WRITE(msg,*) 'input_array(10,1)=rmean (um)=', input_array(10,1)
+         CALL wrf_debug(15, TRIM(msg))
+         WRITE(msg,*) 'input_array(11,1)=rmean (um)=', input_array(11,1)
+         CALL wrf_debug(15, TRIM(msg))
+         WRITE(msg,*) 'input_array(12,1)=rmean (um)=', input_array(12,1)
+         CALL wrf_debug(15, TRIM(msg))
+         WRITE(msg,*) 'input_array(13,1)=hygro=', input_array(13,1)
+         CALL wrf_debug(15, TRIM(msg))
+         WRITE(msg,*) 'input_array(14,1)=hygro=', input_array(14,1)
+         CALL wrf_debug(15, TRIM(msg))
+         WRITE(msg,*) 'input_array(15,1)=hygro=', input_array(15,1)
+         CALL wrf_debug(15, TRIM(msg))
+         WRITE(msg,*) 'input_array(16,1)=hygro=', input_array(16,1)
+         CALL wrf_debug(15, TRIM(msg))
+         ! out_t(1) WRAPS output_array (bound once at setup), so
+         ! torch_model_forward writes its results straight back into the same
+         ! buffer read below. Do NOT re-wrap it here: that is what made the
+         ! tensor churn, and if forward ever fails to land in this buffer the
+         ! code silently reads the zeros set at the top of the block and
+         ! reports fn(1,1)=fn(2,1)=0.
+         CALL wrf_debug(15,'out_t(1) reused (bound at setup)')
+         CALL wrf_debug(15,'torch_model_forward start')
+         call torch_model_forward(ml_model, in_t, out_t)
+         CALL wrf_debug(15,'torch_model_forward finished')
+         ! ---------------- print emulator outputs ----------------
+         do n = 1, out_dim
+         write(msg,'(A,I0,A,ES12.5)') 'ML output_array(1,', n, ')=', output_array(1,n)
+         call wrf_debug(15, trim(msg))
+         end do
+         WRITE(msg,*) 'fn(1,1)=', fn(1,1)
+         CALL wrf_debug(15, TRIM(msg))
+         WRITE(msg,*) 'fn(2,1)=', fn(2,1)
+         CALL wrf_debug(15, TRIM(msg))
+         WRITE(msg,*) 'fn(1,2)=', fn(1,2)
+         CALL wrf_debug(15, TRIM(msg))
+         WRITE(msg,*) 'fn(2,2)=', fn(2,2)
+         CALL wrf_debug(15, TRIM(msg))
+
+         do n = 1, ntype_aer
+           do m = 1, nsize_aer(n)
+               fn_ARG(m,n) = fn(m,n)
+            end do
+         end do
+
+         ! ===== Map emulator outputs -> fn(m,n) : EMULATED MODES ONLY =====
+         ! Only the Aitken (m=1,n=1) and accumulation (m=2,n=1) modes are
+         ! replaced by the emulator. The coarse mode (type 2, n=2) and the
+         ! unused (2,2) slot KEEP their ARG-computed fn/fs/fm/flux from the
+         ! original code above (do NOT feed near-empty coarse into the emulator,
+         ! which produced spurious fn~1 from the 1/na radius singularity).
+         ! Emulator output slots are in native training order:
+         !   output_array(1,1) = Aitken , output_array(1,2) = accumulation.
+         fn(1,1) = max( 0.0, min( 1.0, real(output_array(1,1)) ) )  ! Aitken
+         fn(2,1) = max( 0.0, min( 1.0, real(output_array(1,2)) ) )  ! accumulation
+
+
+         ! Output mode-slot swap DISABLED (paired with the input swap above).
+         ! Emulator out-slot k already corresponds to input-slot k = native mode k,
+         ! so fn(1,1)=Aitken and fn(2,1)=Accum are already correct here.
+         ! tmp_swap = fn(1,1)
+         ! fn(1,1) = fn(2,1)
+         ! fn(2,1) = tmp_swap
+
+         ! ===== Recompute fs, fm consistently with the new fn =====
+
+         if ( (isectional == 2) .or. (isectional == 4) ) then
+            ! ---------------- SECTIONAL branch ----------------
+            do n = 1, ntype_aer
+               do m = 1, nsize_aer(n)
+
+                  ! Only recompute fs/fm for emulated modes (type 1 = Aitken+Accum).
+                  ! Coarse mode (n/=1) retains its ARG-computed fn/fs/fm.
+                  if ( n /= 1 ) cycle
+
+                  if ( bin_is_empty(m,n) ) then
+                  fn(m,n) = 0.0
+                  fs(m,n) = 0.0
+                  fm(m,n) = 0.0
+                  cycle
+                  end if
+
+                  if (fn(m,n) <= 0.0) then
+                  fn(m,n) = 0.0
+                  fs(m,n) = 0.0
+                  fm(m,n) = 0.0
+                  cycle
+                  else if (fn(m,n) >= 1.0) then
+                  fn(m,n) = 1.0
+                  fs(m,n) = 1.0
+                  fm(m,n) = 1.0
+                  cycle
+                  end if
+
+                  ! Recover phi_ml from: fn = a*(1-phi_ml) + 0.5*b*(1-phi_ml^2)
+                  a1_ml = asub(m,n)
+                  b1_ml = bsub(m,n)
+                  AA_ml = 0.5*b1_ml
+                  BB_ml = a1_ml
+                  CC_ml = fn(m,n) - a1_ml - 0.5*b1_ml
+
+                  if (abs(AA_ml) < 1.0e-30) then
+                  ! Degenerate: fn ≈ a*(1-phi_ml) => phi_ml ≈ 1 - fn/a
+                  if (a1_ml > 1.0e-30) then
+                     phi_ml = 1.0 - fn(m,n)/a1_ml
+                  else
+                     phi_ml = 1.0
+                  end if
+                  else
+                  disc_ml = BB_ml*BB_ml - 4.0*AA_ml*CC_ml
+                  if (disc_ml < 0.0) disc_ml = 0.0
+                  phi1_ml = (-BB_ml + sqrt(disc_ml)) / (2.0*AA_ml)
+                  phi2_ml = (-BB_ml - sqrt(disc_ml)) / (2.0*AA_ml)
+                  phi_ml  = 0.5
+                  if ( (phi1_ml >= 0.0) .and. (phi1_ml <= 1.0) ) then
+                     phi_ml = phi1_ml
+                  else if ( (phi2_ml >= 0.0) .and. (phi2_ml <= 1.0) ) then
+                     phi_ml = phi2_ml
+                  end if
+                  end if
+                  if (phi_ml < 0.0) phi_ml = 0.0
+                  if (phi_ml > 1.0) phi_ml = 1.0
+
+                  ! Recompute fm (mass fraction)
+                  phiyy_ml = phi_ml
+                  fm(m,n) = ( yhi(m,n)/ymean(m,n) ) * ( 0.5*asub(m,n)*(1.0 - phiyy_ml*phiyy_ml) + &
+                                                      third*bsub(m,n)*(1.0 - phiyy_ml*phiyy_ml*phiyy_ml) )
+
+                  if (fm(m,n) < fn(m,n)) fm(m,n) = fn(m,n)
+                  if (fm(m,n) > 1.0)     fm(m,n) = 1.0
+
+                  dumaa_fm_ml = fn(m,n)*( yhi(m,n)/ymean(m,n) )
+                  if (fm(m,n) > dumaa_fm_ml) fm(m,n) = dumaa_fm_ml
+                  dumaa_fm_ml = 1.0 + (fn(m,n)-1.0)*( ylo(m,n)/ymean(m,n) )
+                  if (fm(m,n) > dumaa_fm_ml) fm(m,n) = dumaa_fm_ml
+
+                  ! Recompute fs (surface fraction) 
+                  betayy_ml  = ylo(m,n)/yhi(m,n)
+                  dumaa_fs_ml = phiyy_ml**twothird
+                  dumbb_fs_ml = betayy_ml**twothird
+
+                  fs(m,n) = ( asub(m,n)*(1.0 - phiyy_ml*dumaa_fs_ml) + 0.625*bsub(m,n)*(1.0 - phiyy_ml*phiyy_ml*dumaa_fs_ml) ) / &
+                           ( asub(m,n)*(1.0 - betayy_ml*dumbb_fs_ml) + 0.625*bsub(m,n)*(1.0 - betayy_ml*betayy_ml*dumbb_fs_ml) )
+
+                  if (fs(m,n) < fn(m,n)) fs(m,n) = fn(m,n)
+                  if (fs(m,n) > fm(m,n)) fs(m,n) = fm(m,n)
+
+               end do
+            end do
+
+         else
+            ! ---------------- MODAL branch ----------------
+            ! Invert fn = 0.5*(1 - erf(x)) via a few Newton steps on erf(x) = 1 - 2*fn
+            do n = 1, ntype_aer
+               do m = 1, nsize_aer(n)
+
+                  ! Only recompute fs/fm for emulated modes (type 1 = Aitken+Accum).
+                  ! Coarse mode (n/=1) retains its ARG-computed fn/fs/fm.
+                  if ( n /= 1 ) cycle
+
+                  if ( bin_is_empty(m,n) ) then
+                  fn(m,n) = 0.0
+                  fs(m,n) = 0.0
+                  fm(m,n) = 0.0
+                  cycle
+                  end if
+
+                  if (fn(m,n) <= 0.0) then
+                  fn(m,n) = 0.0
+                  fs(m,n) = 0.0
+                  fm(m,n) = 0.0
+                  cycle
+                  else if (fn(m,n) >= 1.0) then
+                  fn(m,n) = 1.0
+                  fs(m,n) = 1.0
+                  fm(m,n) = 1.0
+                  cycle
+                  end if
+
+                  rhs_ml = 1.0 - 2.0*fn(m,n)
+
+                  ! Winitzki-style initial guess for erfinv(rhs_ml)
+                  if (rhs_ml >= 0.0) then
+                  x = 1.0
+                  else
+                  x = -1.0
+                  end if
+                  ! A ~ 0.147 (constant in the approximation)
+                  x = x * sqrt( sqrt( ( (2.0/(pi*0.147)) + 0.5*log(1.0 - rhs_ml*rhs_ml) )**2 - &
+                                       log(1.0 - rhs_ml*rhs_ml)/0.147 ) - &
+                              ( (2.0/(pi*0.147)) + 0.5*log(1.0 - rhs_ml*rhs_ml) ) )
+
+                  do it_ml = 1, 4
+                  fval_ml  = erf(x) - rhs_ml
+                  dfval_ml = 2.0/sqrt(pi) * exp( -x*x )
+                  x     = x - fval_ml/dfval_ml
+                  end do
+
+                  sigma_ml  = alnsign(m,n)
+                  fs(m,n) = 0.5 * ( 1.0 - erf( x - sqrt(2.0) * sigma_ml ) )
+                  fm(m,n) = 0.5 * ( 1.0 - erf( x - 1.5*sqrt(2.0) * sigma_ml ) )
+
+                  if (fs(m,n) < fn(m,n)) fs(m,n) = fn(m,n)
+                  if (fm(m,n) < fs(m,n)) fm(m,n) = fs(m,n)
+                  if (fm(m,n) > 1.0)     fm(m,n) = 1.0
+
+               end do
+            end do
+         end if
+
+         ! ===== Refresh fluxes with the new fractions (emulated modes only) =====
+         ! Coarse mode (n/=1) keeps its ARG-computed fluxes.
+         if ( (top .and. wbar < 0.0) .or. ( (.not. top) .and. wbar > 0.0 ) ) then
+            do n = 1, ntype_aer
+               do m = 1, nsize_aer(n)
+                  if ( n /= 1 ) cycle
+                  fluxn(m,n) = fn(m,n) * wbar
+                  fluxs(m,n) = fs(m,n) * wbar
+                  fluxm(m,n) = fm(m,n) * wbar
+               end do
+            end do
+            flux_fullact = wbar
+            else
+            do n = 1, ntype_aer
+               do m = 1, nsize_aer(n)
+                  if ( n /= 1 ) cycle
+                  fluxn(m,n) = 0.0
+                  fluxs(m,n) = 0.0
+                  fluxm(m,n) = 0.0
+               end do
+            end do
+            flux_fullact = 0.0
+         end if
+   end if
+
+! Liran add ML end ====================================
+
+      return
+      end subroutine activate_ml
 
 !----------------------------------------------------------------------
 !----------------------------------------------------------------------

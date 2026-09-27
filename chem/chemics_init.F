@@ -1916,7 +1916,7 @@ ENDIF ghg_block
         chem(its:ite,kts:min(kte,kde-1),jts:jte,:)=max(chem(its:ite,kts:min(kte,kde-1),jts:jte,:),epsilc)
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
      CASE ( CBMZ_CAM_MAM3_NOAQ, CBMZ_CAM_MAM3_AQ, CBMZ_CAM_MAM7_NOAQ, CBMZ_CAM_MAM7_AQ )
-       call wrf_debug(15,'call CAM_MODAL aerosols initialization')
+       call wrf_debug(15,'call CAM_MODAL aerosols initialization Liran1')
        call cam_mam_init(                                            &
                id, numgas, config_flags,                             &
                ids,ide, jds,jde, kds,kde,                            &
